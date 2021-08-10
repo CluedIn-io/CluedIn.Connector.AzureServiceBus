@@ -1,0 +1,87 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.452
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B2A52533-7FBF-41FE-A0AF-874FC54300B2}"
+	ProjectSection(SolutionItems) = preProject
+		src\Directory.Build.props = src\Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{7E2E897B-E664-4ECC-8AD8-814AAEAD8639}"
+	ProjectSection(SolutionItems) = preProject
+		test\Directory.Build.props = test\Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "unit", "unit", "{A32B6852-82C7-4107-8C68-AE9232289E09}"
+	ProjectSection(SolutionItems) = preProject
+		test\unit\Directory.Build.props = test\unit\Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "integration", "integration", "{DBD1964B-DBD9-4C70-96CA-391C34B3D75F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "acceptance", "acceptance", "{5A324190-DAD7-4EEF-92AA-BC3E5712C80B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{E1A76004-11EB-44E0-B1D2-B197689E9265}"
+	ProjectSection(SolutionItems) = preProject
+		azure-pipelines.yml = azure-pipelines.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9BD54E81-D9C8-4419-82B8-8EE6CC7E2647}"
+	ProjectSection(SolutionItems) = preProject
+		Packages.props = Packages.props
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NuGet", "NuGet", "{02641789-0D38-4DBB-9288-23592CF55D25}"
+	ProjectSection(SolutionItems) = preProject
+		NuGet.config = NuGet.config
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Code Style", "Code Style", "{2C3AECCF-DCB5-4ED7-8B7B-8F373EDE3A5E}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Git", "Git", "{17EE3C8D-BAE4-481A-B9CC-1BE878E86124}"
+	ProjectSection(SolutionItems) = preProject
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Connector.AzureServiceBus", "src\Connector.SqlServer\Connector.AzureServiceBus.csproj", "{ED656EF9-9D15-45CA-B505-AF48AD8D0145}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Connector.AzureServiceBus.Unit.Tests", "test\unit\Connector.SqlServer.Test\Connector.AzureServiceBus.Unit.Tests.csproj", "{8B1A895D-5108-4494-914E-F8FEEC53076A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ED656EF9-9D15-45CA-B505-AF48AD8D0145}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED656EF9-9D15-45CA-B505-AF48AD8D0145}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED656EF9-9D15-45CA-B505-AF48AD8D0145}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED656EF9-9D15-45CA-B505-AF48AD8D0145}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B1A895D-5108-4494-914E-F8FEEC53076A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B1A895D-5108-4494-914E-F8FEEC53076A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B1A895D-5108-4494-914E-F8FEEC53076A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B1A895D-5108-4494-914E-F8FEEC53076A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A32B6852-82C7-4107-8C68-AE9232289E09} = {7E2E897B-E664-4ECC-8AD8-814AAEAD8639}
+		{DBD1964B-DBD9-4C70-96CA-391C34B3D75F} = {7E2E897B-E664-4ECC-8AD8-814AAEAD8639}
+		{5A324190-DAD7-4EEF-92AA-BC3E5712C80B} = {7E2E897B-E664-4ECC-8AD8-814AAEAD8639}
+		{E1A76004-11EB-44E0-B1D2-B197689E9265} = {9BD54E81-D9C8-4419-82B8-8EE6CC7E2647}
+		{02641789-0D38-4DBB-9288-23592CF55D25} = {9BD54E81-D9C8-4419-82B8-8EE6CC7E2647}
+		{2C3AECCF-DCB5-4ED7-8B7B-8F373EDE3A5E} = {9BD54E81-D9C8-4419-82B8-8EE6CC7E2647}
+		{17EE3C8D-BAE4-481A-B9CC-1BE878E86124} = {9BD54E81-D9C8-4419-82B8-8EE6CC7E2647}
+		{ED656EF9-9D15-45CA-B505-AF48AD8D0145} = {B2A52533-7FBF-41FE-A0AF-874FC54300B2}
+		{8B1A895D-5108-4494-914E-F8FEEC53076A} = {A32B6852-82C7-4107-8C68-AE9232289E09}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6A61CB42-80C5-4A83-AC3E-DA41FC875525}
+	EndGlobalSection
+EndGlobal

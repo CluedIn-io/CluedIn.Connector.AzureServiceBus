@@ -1,0 +1,20 @@
+<Project>
+  <Import Project="..\Directory.Build.props" />
+
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <PropertyGroup>
+
+    <!-- <RepositoryUrl>TODO</RepositoryUrl> -->
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+
+    <!-- Legacy NuGet symbols format, ref: https://docs.microsoft.com/en-us/nuget/create-packages/symbol-packages-snupkg -->
+    <SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+    <IncludeSymbols>true</IncludeSymbols>
+
+  </PropertyGroup>
+
+</Project>

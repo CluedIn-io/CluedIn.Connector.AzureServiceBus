@@ -1,0 +1,64 @@
+<Project>
+  <PropertyGroup Label="Dependency Versions">
+    <_CacheCow>2.7.2</_CacheCow>
+    <_EasyNetQ>3.7.1</_EasyNetQ>
+    <_EntityFramework>3.1.5</_EntityFramework>
+    <_MicrosoftExtensions>3.1.5</_MicrosoftExtensions>
+    <_ComponentHost>2.0.0-*</_ComponentHost>
+    <_AutoFixture>4.11.0</_AutoFixture>
+    <_CluedIn>3.2.2-*</_CluedIn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+        Specified versions for dependencies in test projects
+
+        MUST SPECIFY IN CSPROJ AS <PackageReference Name="<depName>" />
+    -->
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="16.5.0" />
+    <PackageReference Update="Azure.Messaging.ServiceBus" Version="7.2.1" />
+    <PackageReference Update="AutoFixture.Xunit2" Version="$(_AutoFixture)" />
+    <PackageReference Update="AutoFixture.Idioms" Version="$(_AutoFixture)" />
+    <PackageReference Update="AutoFixture.AutoMoq" Version="$(_AutoFixture)" />
+    <PackageReference Update="coverlet.msbuild" Version="2.8.0" />
+    <PackageReference Update="Serilog.Sinks.XUnit" Version="1.0.21" />
+    <PackageReference Update="xunit" Version="2.4.1" />
+    <PackageReference Update="xunit.runner.visualstudio" Version="2.4.1" />
+    <PackageReference Update="Xunit.SkippableFact" Version="1.3.12" />
+    <PackageReference Update="Moq" Version="4.13.1" />
+    <PackageReference Update="Shouldly" Version="3.0.2" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore" version="$(_EntityFramework)" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.InMemory" version="$(_EntityFramework)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+        Specified versions for dependencies across the solution
+
+        MUST SPECIFY IN CSPROJ AS <PackageReference Name="<depName>" />
+    -->
+    <PackageReference Update="Castle.Windsor" Version="5.0.1" />
+    <PackageReference Update="ComponentHost" Version="$(_ComponentHost)" />
+    <PackageReference Update="CluedIn.Core" Version="$(_CluedIn)" />
+    <PackageReference Update="CluedIn.Core.Agent" Version="$(_CluedIn)" />
+    <PackageReference Update="CluedIn.Crawling" Version="$(_CluedIn)" />
+    <PackageReference Update="CluedIn.CrawlerIntegrationTesting" Version="$(_CluedIn)" />
+    <PackageReference Update="CluedIn.DataStore" Version="$(_CluedIn)" />
+    <PackageReference Update="RestSharp" Version="106.10.1" />
+    <PackageReference Update="Dapper" Version="2.0.35" />
+    <PackageReference Update="Dapper.SqlBuilder" Version="2.0.35" />
+    <PackageReference Update="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
+
+  </ItemGroup>
+
+  <ItemGroup Label="Global tools">
+    <!--
+            Automatically added to each project with :
+            - IncludeAssets="Analyzers;Build"
+            - PrivateAssets="All"
+
+            DO NOT NEED TO BE ADDED AS A PACKAGEREFERENCE
+        -->
+    <!-- <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" /> -->
+  </ItemGroup>
+</Project>

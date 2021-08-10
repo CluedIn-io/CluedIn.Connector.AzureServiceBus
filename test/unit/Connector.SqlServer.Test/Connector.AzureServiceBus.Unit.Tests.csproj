@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Sql Server Connector Unit-test library.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="D:\Projects\CluedIn\CluedIn.Connector.SqlServer\build\assets\nugetlogo.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AutoFixture.Xunit2" />
+    <PackageReference Include="CluedIn.DataStore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="AutoFixture.Idioms" />
+    <PackageReference Include="AutoFixture.AutoMoq" />
+    <PackageReference Include="coverlet.msbuild" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Moq" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Connector.SqlServer\Connector.AzureServiceBus.csproj" />
+  </ItemGroup>
+</Project>
