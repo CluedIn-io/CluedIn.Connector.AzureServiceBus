@@ -13,13 +13,13 @@ namespace CluedIn.Connector.AzureServiceBus
             public const string Name = "name";
         }
 
-        public const string ConnectorName = "AzureEventConnector";
-        public const string ConnectorComponentName = "AzureEventConnector";
-        public const string ConnectorDescription = "Supports publishing of data to Azure Event Hubs.";
+        public const string ConnectorName = "AzureServiceBusConnector";
+        public const string ConnectorComponentName = "AzureServiceBusConnector";
+        public const string ConnectorDescription = "Supports publishing of data to Azure Service Bus.";
         public const string Uri = "https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview";
 
-        public static readonly Guid ProviderId = Guid.Parse("{F6178E19-6168-449C-B4B6-F9810E86C1C2}");
-        public const string ProviderName = "Azure Event Hub Connector";
+        public static readonly Guid ProviderId = Guid.Parse("{SELECT NEWID()}");
+        public const string ProviderName = "Azure Service Bus Connector";
         public const bool SupportsConfiguration = false;
         public const bool SupportsWebHooks = false;
         public const bool SupportsAutomaticWebhookCreation = false;
@@ -28,12 +28,12 @@ namespace CluedIn.Connector.AzureServiceBus
         public const string ReAuthEndpoint = null;
 
         public static IList<string> ServiceType = new List<string> { "Connector" };
-        public static IList<string> Aliases = new List<string> { "AzureEventConnector" };
+        public static IList<string> Aliases = new List<string> { "AzureServiceBusConnector" };
         public const string IconResourceName = "Resources.service-bus.svg";
         public const string Instructions = "Provide authentication instructions here, if applicable";
         public const IntegrationType Type = IntegrationType.Connector;
         public const string Category = "Connectivity";
-        public const string Details = "Supports publishing of data to Azure Event Hubs.";
+        public const string Details = "Supports publishing of data to Azure Service Bus.";
 
         public static AuthMethods AuthMethods = new AuthMethods
         {
