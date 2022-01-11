@@ -1,9 +1,27 @@
-# GitVersion.yml
 mode: ContinuousDeployment
-next-version: 3.3
+next-version: "3.3"
 branches:
-  master:
-    mode: ContinuousDelivery
+  hotfix:
+    tag: useBranchName
   pull-request:
     tag: pr
     increment: None
+  master:
+    mode: ContinuousDelivery
+  ama:
+    is-mainline: false
+    source-branches:
+    - main
+    - develop
+    mode: ContinuousDeployment
+    pre-release-weight: 30000
+    regex: ^ama[/-]
+    track-merge-target: false
+    prevent-increment-of-merged-branch-version: true
+    tag: ama
+    is-release-branch: false
+    increment: None
+    tracks-release-branches: false
+  develop:
+    tag: alpha
+
