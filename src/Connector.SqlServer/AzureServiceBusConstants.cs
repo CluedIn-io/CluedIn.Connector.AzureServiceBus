@@ -42,7 +42,7 @@ namespace CluedIn.Connector.AzureServiceBus
                 new Control
                 {
                     name = KeyName.ConnectionString,
-                    displayName = "ConnectionString",
+                    displayName = "Connection String",
                     type = "input",
                     isRequired = true
                 },
