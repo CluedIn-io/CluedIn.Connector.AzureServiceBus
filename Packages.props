@@ -6,9 +6,8 @@
     <_MicrosoftExtensions>3.1.5</_MicrosoftExtensions>
     <_ComponentHost>2.0.0-*</_ComponentHost>
     <_AutoFixture>4.11.0</_AutoFixture>
-    <_CluedIn>3.2.2-*</_CluedIn>
+    <_CluedIn>3.3.0-*</_CluedIn>
   </PropertyGroup>
-
   <ItemGroup>
     <!--
         Specified versions for dependencies in test projects
@@ -30,7 +29,6 @@
     <PackageReference Update="Microsoft.EntityFrameworkCore" version="$(_EntityFramework)" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.InMemory" version="$(_EntityFramework)" />
   </ItemGroup>
-
   <ItemGroup>
     <!--
         Specified versions for dependencies across the solution
@@ -48,9 +46,7 @@
     <PackageReference Update="Dapper" Version="2.0.35" />
     <PackageReference Update="Dapper.SqlBuilder" Version="2.0.35" />
     <PackageReference Update="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
-
   </ItemGroup>
-
   <ItemGroup Label="Global tools">
     <!--
             Automatically added to each project with :

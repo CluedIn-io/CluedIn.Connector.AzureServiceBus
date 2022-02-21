@@ -18,7 +18,7 @@ namespace CluedIn.Connector.AzureServiceBus
         public const string ConnectorDescription = "Supports publishing of data to Azure Service Bus.";
         public const string Uri = "https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview";
 
-        public static readonly Guid ProviderId = Guid.Parse("{F6178E19-6168-449C-B4B6-F9810E86C1C3}");
+        public static readonly Guid ProviderId = Guid.Parse("{3AFFA8BB-D16E-487F-8291-6300DF5D4C25}");
         public const string ProviderName = "Azure Service Bus Connector";
         public const bool SupportsConfiguration = false;
         public const bool SupportsWebHooks = false;
@@ -29,7 +29,7 @@ namespace CluedIn.Connector.AzureServiceBus
 
         public static IList<string> ServiceType = new List<string> { "Connector" };
         public static IList<string> Aliases = new List<string> { "AzureServiceBusConnector" };
-        public const string IconResourceName = "Resources.azureservicebus.png";
+        public const string IconResourceName = "Resources.service-bus.svg";
         public const string Instructions = "Provide authentication instructions here, if applicable";
         public const IntegrationType Type = IntegrationType.Connector;
         public const string Category = "Connectivity";
@@ -42,7 +42,7 @@ namespace CluedIn.Connector.AzureServiceBus
                 new Control
                 {
                     name = KeyName.ConnectionString,
-                    displayName = "ConnectionString",
+                    displayName = "Connection String",
                     type = "input",
                     isRequired = true
                 },

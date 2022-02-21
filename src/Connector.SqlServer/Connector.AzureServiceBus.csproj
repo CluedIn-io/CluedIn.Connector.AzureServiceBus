@@ -6,10 +6,10 @@
     <IsCluedInServerComponent>true</IsCluedInServerComponent>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="Resources\azureservicebus.png" />
+    <None Remove="Resources\service-bus.svg" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\azureservicebus.png" />
+    <EmbeddedResource Include="Resources\service-bus.svg" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Messaging.ServiceBus" />
