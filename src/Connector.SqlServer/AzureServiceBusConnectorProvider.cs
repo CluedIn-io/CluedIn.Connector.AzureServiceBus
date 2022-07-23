@@ -72,7 +72,7 @@ namespace CluedIn.Connector.AzureServiceBus
                 return Task.FromResult(result.ToDictionary());
             }
 
-            throw new InvalidOperationException($"Unexpected data type for AzureEventConnectorJobData, {jobData.GetType()}");
+            throw new InvalidOperationException($"Unexpected data type for AzureServiceBusConnectorJobData, {jobData.GetType()}");
         }
 
         public override Task<IDictionary<string, object>> GetHelperConfiguration(
@@ -99,7 +99,7 @@ namespace CluedIn.Connector.AzureServiceBus
                     "Wrong CrawlJobData type", nameof(jobData));
             }
 
-            var accountId = $"{result.Name}.{result.ConnectionString}";
+            var accountId = result.Name;
 
             return Task.FromResult(new AccountInformation(accountId, $"{accountId}"));
         }
