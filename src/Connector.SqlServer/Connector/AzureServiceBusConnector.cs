@@ -105,7 +105,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
             await using var client = new ServiceBusClient((string)config.Authentication[AzureServiceBusConstants.KeyName.ConnectionString]);
           
-            ServiceBusSender sender = client.CreateSender((string)config.Authentication[AzureServiceBusConstants.KeyName.Name]);
+            ServiceBusSender sender = client.CreateSender(containerName);
             ServiceBusMessage message = new ServiceBusMessage(JsonUtility.Serialize(data));
 
             try

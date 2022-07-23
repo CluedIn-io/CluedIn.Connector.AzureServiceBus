@@ -43,13 +43,13 @@ namespace CluedIn.Connector.AzureServiceBus
                 {
                     name = KeyName.ConnectionString,
                     displayName = "Connection String",
-                    type = "input",
+                    type = "password",
                     isRequired = true
                 },
                 new Control
                 {
                     name = KeyName.Name,
-                    displayName = "Name",
+                    displayName = "Server Name",
                     type = "input",
                     isRequired = true
                 }
