@@ -114,7 +114,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             }
             catch (Exception exc)
             {
-                executionContext.Log.LogError("Could not send event to Azure Service Bus.", exc);
+                executionContext.Log.LogError(exc, "Could not send event to Azure Service Bus.");
             }
             finally
             {
