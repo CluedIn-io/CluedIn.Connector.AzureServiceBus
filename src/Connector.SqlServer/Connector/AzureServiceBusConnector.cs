@@ -1,20 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
+using Azure.Messaging.ServiceBus.Administration;
 using CluedIn.Core;
-using CluedIn.Core.Configuration;
+using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
 using CluedIn.Core.DataStore;
-using CluedIn.Core.Processing;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using ExecutionContext = CluedIn.Core.ExecutionContext;
 
 namespace CluedIn.Connector.AzureServiceBus.Connector
@@ -22,19 +16,52 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
     public class AzureServiceBusConnector : ConnectorBase
     {
         private readonly ILogger<AzureServiceBusConnector> _logger;
-        private readonly IAzureServiceBusClient _client;
+        private readonly IApplicationCache _cache;
 
-     
-        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IAzureServiceBusClient client) : base(repo)
+        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(repo)
         {
             ProviderId = AzureServiceBusConstants.ProviderId;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _client = client ?? throw new ArgumentNullException(nameof(client));
+            _cache = cache;
         }
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid providerDefinitionId, CreateContainerModel model)
         {
-            await Task.FromResult(0);
+            var config = await base.GetAuthenticationDetails(executionContext, providerDefinitionId);
+            var data = new AzureServiceBusConnectorJobData(config.Authentication);
+
+            var properties = ServiceBusConnectionStringProperties.Parse(data.ConnectionString);
+
+            if ((data.Name ?? properties.EntityPath) != null)
+            {
+                return; // if a queue name has been specified via the connection string or the export target config then do not try to create the queue
+            }
+
+            var key = $"CreateQueue-{properties.FullyQualifiedNamespace}-{properties.SharedAccessKeyName}-{model.Name}";
+
+            await _cache.GetItem(key, async () =>
+                {
+                    try
+                    {
+                        var client = new ServiceBusAdministrationClient(data.ConnectionString);
+
+                        var exists = await client.QueueExistsAsync(model.Name);
+
+                        if (!exists)
+                        {
+                            await client.CreateQueueAsync(model.Name);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogTrace(ex, "Exception creating queue");
+                    }
+
+                    return await Task.FromResult(true);
+                },
+                true,
+                policy => policy.WithAbsoluteExpiration(DateTimeOffset.Now.AddDays(1)) // will never be able to create a queue without manage permissions so lets not try for a long time
+            );
         }
 
         public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
@@ -91,22 +118,77 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task<bool> VerifyConnection(ExecutionContext executionContext, Guid providerDefinitionId)
         {
-            return await Task.FromResult(true);
+            var config = await base.GetAuthenticationDetails(executionContext, providerDefinitionId);
+
+            return await VerifyConnection(executionContext, config.Authentication);
         }
 
         public override async Task<bool> VerifyConnection(ExecutionContext executionContext, IDictionary<string, object> config)
         {
-            return await Task.FromResult(true);
+            var data = new AzureServiceBusConnectorJobData(config);
+
+            ServiceBusConnectionStringProperties properties;
+
+            try
+            {
+                properties = ServiceBusConnectionStringProperties.Parse(data.ConnectionString);
+            }
+            catch
+            {
+                return false;
+            }
+
+            var queueName = data.Name ?? properties.EntityPath;
+
+            if (queueName == null)  // no queueName, lets use the admin client to verify the connection string
+            {
+                var client = new ServiceBusAdministrationClient(data.ConnectionString);
+
+                try
+                {
+                    var queuesListingResult = client.GetQueuesAsync();
+                    await queuesListingResult.GetAsyncEnumerator().MoveNextAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogTrace(ex, "Exception response when enumerating queues.");
+
+                    if (!ex.Message.Contains("claims required")) // token's in the connection string must be valid if we get a claims required message
+                    {
+                        return false;
+                    }
+                }
+            }
+            else
+            {
+                try
+                {
+                    await using var client = new ServiceBusClient(data.ConnectionString);
+                    var sender = client.CreateSender(data.Name ?? properties.EntityPath);
+
+                    await sender.CreateMessageBatchAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogInformation(ex, $"{nameof(VerifyConnection)} failed for {nameof(AzureServiceBusConnector)}");
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public override async Task StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, IDictionary<string, object> data)
         {
-            var config = await base.GetAuthenticationDetails(executionContext, providerDefinitionId);
+            var details = await base.GetAuthenticationDetails(executionContext, providerDefinitionId);
+            var config = new AzureServiceBusConnectorJobData(details.Authentication);
 
-            await using var client = new ServiceBusClient((string)config.Authentication[AzureServiceBusConstants.KeyName.ConnectionString]);
-          
-            ServiceBusSender sender = client.CreateSender((string)config.Authentication[AzureServiceBusConstants.KeyName.Name]);
-            ServiceBusMessage message = new ServiceBusMessage(JsonUtility.Serialize(data));
+            await using var client = new ServiceBusClient(config.ConnectionString);
+
+            var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
+
+            var sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
+            var message = new ServiceBusMessage(JsonUtility.Serialize(data));
 
             try
             {

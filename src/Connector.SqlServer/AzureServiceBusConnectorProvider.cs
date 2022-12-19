@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using CluedIn.Core;
 using CluedIn.Core.Crawling;
 using CluedIn.Core.Data.Relational;
@@ -72,7 +73,7 @@ namespace CluedIn.Connector.AzureServiceBus
                 return Task.FromResult(result.ToDictionary());
             }
 
-            throw new InvalidOperationException($"Unexpected data type for AzureEventConnectorJobData, {jobData.GetType()}");
+            throw new InvalidOperationException($"Unexpected data type for {nameof(AzureServiceBusConnectorJobData)}, {jobData.GetType()}");
         }
 
         public override Task<IDictionary<string, object>> GetHelperConfiguration(
@@ -99,7 +100,25 @@ namespace CluedIn.Connector.AzureServiceBus
                     "Wrong CrawlJobData type", nameof(jobData));
             }
 
-            var accountId = $"{result.Name}.{result.ConnectionString}";
+            var parts = new List<string>();
+
+            var properties = ServiceBusConnectionStringProperties.Parse(result.ConnectionString);
+            parts.Add(properties.FullyQualifiedNamespace);
+            if (!string.IsNullOrWhiteSpace(properties.SharedAccessKeyName))
+            {
+                parts.Add(properties.SharedAccessKeyName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.Name))
+            {
+                parts.Add(result.Name);
+            }
+            else if (!string.IsNullOrWhiteSpace(properties.EntityPath))
+            {
+                parts.Add(properties.EntityPath);
+            }
+
+            var accountId = string.Join(" - ", parts);
 
             return Task.FromResult(new AccountInformation(accountId, $"{accountId}"));
         }

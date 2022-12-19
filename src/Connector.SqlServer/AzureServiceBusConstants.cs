@@ -43,16 +43,16 @@ namespace CluedIn.Connector.AzureServiceBus
                 {
                     name = KeyName.ConnectionString,
                     displayName = "Connection String",
-                    type = "input",
+                    type = "password",
                     isRequired = true
                 },
                 new Control
                 {
                     name = KeyName.Name,
-                    displayName = "Name",
+                    displayName = "Queue Name (default: EntityPath from connection string, else the target name of the stream)",
                     type = "input",
-                    isRequired = true
-                }
+                    isRequired = false,
+                },
             }
         };
 
