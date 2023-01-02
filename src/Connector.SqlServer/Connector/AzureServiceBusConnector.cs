@@ -192,7 +192,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
             try
             {
-                await sender.SendMessageAsync(message);
+                await ActionExtensions.ExecuteWithRetryAsync(() => sender.SendMessageAsync(message));
             }
             catch (Exception exc)
             {
