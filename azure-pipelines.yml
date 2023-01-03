@@ -51,8 +51,8 @@ steps:
     inputs:
       targetType: inline
       script: |
-        Write-Host ("##vso[task.setvariable variable=SERVICEBUS_ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING;]$(SERVICEBUS_ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING)")
-        Write-Host ("##vso[task.setvariable variable=SERVICEBUS_TESTQUEUE_CONNECTIONSTRING;]$(SERVICEBUS_TESTQUEUE_CONNECTIONSTRING)")
+        Write-Host ("##vso[task.setvariable variable=SERVICEBUS_ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING;]$(ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING)")
+        Write-Host ("##vso[task.setvariable variable=SERVICEBUS_TESTQUEUE_CONNECTIONSTRING;]$(TESTQUEUE_CONNECTIONSTRING)")
 
   - template: crawler.build.yml@templates
     parameters:
