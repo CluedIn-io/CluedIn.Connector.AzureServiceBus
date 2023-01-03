@@ -27,7 +27,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid providerDefinitionId, CreateContainerModel model)
         {
-            var config = await base.GetAuthenticationDetails(executionContext, providerDefinitionId);
+            var config = await GetAuthenticationDetails(executionContext, providerDefinitionId);
             var data = new AzureServiceBusConnectorJobData(config.Authentication);
 
             var properties = ServiceBusConnectionStringProperties.Parse(data.ConnectionString);
@@ -118,7 +118,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task<bool> VerifyConnection(ExecutionContext executionContext, Guid providerDefinitionId)
         {
-            var config = await base.GetAuthenticationDetails(executionContext, providerDefinitionId);
+            var config = await GetAuthenticationDetails(executionContext, providerDefinitionId);
 
             return await VerifyConnection(executionContext, config.Authentication);
         }
@@ -180,7 +180,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, IDictionary<string, object> data)
         {
-            var details = await base.GetAuthenticationDetails(executionContext, providerDefinitionId);
+            var details = await GetAuthenticationDetails(executionContext, providerDefinitionId);
             var config = new AzureServiceBusConnectorJobData(details.Authentication);
 
             await using var client = new ServiceBusClient(config.ConnectionString);
