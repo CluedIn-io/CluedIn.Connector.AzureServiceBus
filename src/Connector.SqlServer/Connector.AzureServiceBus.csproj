@@ -16,7 +16,6 @@
     <PackageReference Include="CluedIn.Core" />
     <PackageReference Include="CluedIn.Core.Agent" />
     <PackageReference Include="CluedIn.Crawling" />
-    <PackageReference Include="ComponentHost" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="Dapper.SqlBuilder" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" />
