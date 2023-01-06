@@ -84,13 +84,6 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             }
         }
 
-        public override async Task<bool> VerifyConnection(ExecutionContext executionContext, Guid providerDefinitionId)
-        {
-            var config = await GetAuthenticationDetails(executionContext, providerDefinitionId);
-
-            return await VerifyConnection(executionContext, config.Authentication);
-        }
-
         public override async Task<bool> VerifyConnection(ExecutionContext executionContext, IDictionary<string, object> config)
         {
             var data = new AzureServiceBusConnectorJobData(config);
