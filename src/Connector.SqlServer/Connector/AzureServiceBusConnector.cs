@@ -13,16 +13,18 @@ using ExecutionContext = CluedIn.Core.ExecutionContext;
 
 namespace CluedIn.Connector.AzureServiceBus.Connector
 {
-    public class AzureServiceBusConnector : ConnectorBase
+    public class AzureServiceBusConnector : ConnectorBase, IAsyncDisposable
     {
         private readonly ILogger<AzureServiceBusConnector> _logger;
         private readonly IApplicationCache _cache;
+        private readonly IDictionary<string, KeyValuePair<ServiceBusClient, ServiceBusSender>> _serviceBusResourcesCache;
 
         public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(repo)
         {
             ProviderId = AzureServiceBusConstants.ProviderId;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cache = cache;
+            _serviceBusResourcesCache = new Dictionary<string, KeyValuePair<ServiceBusClient, ServiceBusSender>>();
         }
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid providerDefinitionId, CreateContainerModel model)
@@ -64,26 +66,6 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             );
         }
 
-        public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task ArchiveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task RenameContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id, string newName)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task RemoveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
-        {
-            await Task.FromResult(0);
-        }
-
         public override Task<string> GetValidDataTypeName(ExecutionContext executionContext, Guid providerDefinitionId, string name)
         {
             // Strip non-alpha numeric characters
@@ -104,16 +86,6 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             {
                 return await Task.FromResult(name);
             }
-        }
-
-        public override async Task<IEnumerable<IConnectorContainer>> GetContainers(ExecutionContext executionContext, Guid providerDefinitionId)
-        {
-            return await Task.FromResult(new List<IConnectorContainer>());
-        }
-
-        public override async Task<IEnumerable<IConnectionDataType>> GetDataTypes(ExecutionContext executionContext, Guid providerDefinitionId, string containerId)
-        {
-            return await Task.FromResult(new List<IConnectionDataType>());
         }
 
         public override async Task<bool> VerifyConnection(ExecutionContext executionContext, Guid providerDefinitionId)
@@ -180,14 +152,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, IDictionary<string, object> data)
         {
-            var details = await GetAuthenticationDetails(executionContext, providerDefinitionId);
-            var config = new AzureServiceBusConnectorJobData(details.Authentication);
-
-            await using var client = new ServiceBusClient(config.ConnectionString);
-
-            var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
-
-            var sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
+            var sender = await GetSender(executionContext, providerDefinitionId, containerName);
             var message = new ServiceBusMessage(JsonUtility.Serialize(data));
 
             try
@@ -198,15 +163,90 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             {
                 executionContext.Log.LogError(exc, "Could not send event to Azure Service Bus.");
             }
-            finally
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await DisposeAsyncCore();
+
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual async ValueTask DisposeAsyncCore()
+        {
+            foreach (var kvp in _serviceBusResourcesCache.Values)
             {
-                await client.DisposeAsync();
+                await kvp.Value.DisposeAsync();
+                await kvp.Key.DisposeAsync();
+            }
+
+            _serviceBusResourcesCache.Clear();
+        }
+
+        private async Task<ServiceBusSender> GetSender(ExecutionContext executionContext, Guid providerDefinitionId, string containerName)
+        {
+            var authDetails = await GetAuthenticationDetails(executionContext, providerDefinitionId);
+            var config = new AzureServiceBusConnectorJobData(authDetails.Authentication);
+
+            return GetServiceBusResources(config.ConnectionString, config.Name, containerName).Value;
+        }
+
+        private KeyValuePair<ServiceBusClient, ServiceBusSender> GetServiceBusResources(string connectionString, string queueName, string containerName)
+        {
+            var key = $"{connectionString}{queueName}{containerName}";
+            lock (_serviceBusResourcesCache)
+            {
+                if (_serviceBusResourcesCache.TryGetValue(key, out var serviceBusResources))
+                    return serviceBusResources;
+                else
+                    return _serviceBusResourcesCache[key] = CreateServiceBusResources(connectionString, queueName, containerName);
             }
         }
 
+        private KeyValuePair<ServiceBusClient, ServiceBusSender> CreateServiceBusResources(string connectionString, string queueName, string containerName)
+        {
+            var client = new ServiceBusClient(connectionString);
+            var properties = ServiceBusConnectionStringProperties.Parse(connectionString);
+            var sender = client.CreateSender(queueName ?? properties.EntityPath ?? containerName);
+
+            return KeyValuePair.Create(client, sender);
+        }
+
+        #region NotImplementedMembers
         public override async Task StoreEdgeData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, string originEntityCode, IEnumerable<string> edges)
         {
             await Task.FromResult(0);
         }
+
+        public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        {
+            await Task.FromResult(0);
+        }
+
+        public override async Task ArchiveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        {
+            await Task.FromResult(0);
+        }
+
+        public override async Task RenameContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id, string newName)
+        {
+            await Task.FromResult(0);
+        }
+
+        public override async Task RemoveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        {
+            await Task.FromResult(0);
+        }
+
+        public override async Task<IEnumerable<IConnectorContainer>> GetContainers(ExecutionContext executionContext, Guid providerDefinitionId)
+        {
+            return await Task.FromResult(new List<IConnectorContainer>());
+        }
+
+        public override async Task<IEnumerable<IConnectionDataType>> GetDataTypes(ExecutionContext executionContext, Guid providerDefinitionId, string containerId)
+        {
+            return await Task.FromResult(new List<IConnectionDataType>());
+        }
+        #endregion
     }
 }
