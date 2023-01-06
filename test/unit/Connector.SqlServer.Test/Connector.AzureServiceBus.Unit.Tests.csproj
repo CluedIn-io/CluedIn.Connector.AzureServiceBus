@@ -21,4 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Connector.SqlServer\Connector.AzureServiceBus.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Connector\" />
+  </ItemGroup>
 </Project>
