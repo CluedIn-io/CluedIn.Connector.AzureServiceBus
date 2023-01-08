@@ -4,7 +4,6 @@
     <_EasyNetQ>3.7.1</_EasyNetQ>
     <_EntityFramework>3.1.5</_EntityFramework>
     <_MicrosoftExtensions>3.1.5</_MicrosoftExtensions>
-    <_ComponentHost>2.0.0-*</_ComponentHost>
     <_AutoFixture>4.11.0</_AutoFixture>
     <_CluedIn>3.4.0-*</_CluedIn>
   </PropertyGroup>
@@ -37,7 +36,6 @@
         MUST SPECIFY IN CSPROJ AS <PackageReference Name="<depName>" />
     -->
     <PackageReference Update="Castle.Windsor" Version="5.0.1" />
-    <PackageReference Update="ComponentHost" Version="$(_ComponentHost)" />
     <PackageReference Update="CluedIn.Core" Version="$(_CluedIn)" />
     <PackageReference Update="CluedIn.Core.Agent" Version="$(_CluedIn)" />
     <PackageReference Update="CluedIn.Crawling" Version="$(_CluedIn)" />
