@@ -20,8 +20,6 @@ namespace CluedIn.Connector.AzureServiceBus
         {
             await ServiceBusSender.DisposeAsync();
             await ServiceBusClient.DisposeAsync();
-
-            GC.SuppressFinalize(this);
         }
     }
 }
