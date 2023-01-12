@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
@@ -13,18 +14,34 @@ using ExecutionContext = CluedIn.Core.ExecutionContext;
 
 namespace CluedIn.Connector.AzureServiceBus.Connector
 {
-    public class AzureServiceBusConnector : ConnectorBase, IAsyncDisposable
+    public class AzureServiceBusConnector : ConnectorBase, IDisposable
     {
         private readonly ILogger<AzureServiceBusConnector> _logger;
         private readonly IApplicationCache _cache;
-        private readonly IDictionary<string, KeyValuePair<ServiceBusClient, ServiceBusSender>> _serviceBusResourcesCache;
+        private readonly MemoryCache _serviceBusResourcesCache;
+        private readonly CacheItemPolicy _cacheItemPolicy;
+        private readonly object _serviceBusResourcesCacheLock;
+        private bool _disposed;
 
         public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(repo)
         {
             ProviderId = AzureServiceBusConstants.ProviderId;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cache = cache;
-            _serviceBusResourcesCache = new Dictionary<string, KeyValuePair<ServiceBusClient, ServiceBusSender>>();
+            _serviceBusResourcesCache = new MemoryCache($"{nameof(AzureServiceBusConnector)} cache");
+            _cacheItemPolicy = new CacheItemPolicy
+            {
+                AbsoluteExpiration = DateTimeOffset.UtcNow.AddHours(1),
+                RemovedCallback = DisposeCachedResource
+            };
+
+            _serviceBusResourcesCacheLock = new object();
+            _disposed = false;
+        }
+
+        ~AzureServiceBusConnector()
+        {
+            Dispose(false);
         }
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid providerDefinitionId, CreateContainerModel model)
@@ -165,22 +182,33 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             }
         }
 
-        public async ValueTask DisposeAsync()
+        public void Dispose()
         {
-            await DisposeAsyncCore();
-
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        protected virtual async ValueTask DisposeAsyncCore()
+        protected virtual void Dispose(bool disposing)
         {
-            foreach (var kvp in _serviceBusResourcesCache.Values)
-            {
-                await kvp.Value.DisposeAsync();
-                await kvp.Key.DisposeAsync();
-            }
+            if (_disposed)
+                return;
 
-            _serviceBusResourcesCache.Clear();
+            if (disposing)
+                _serviceBusResourcesCache.Dispose();
+
+            _disposed = true;
+        }
+
+        private void DisposeCachedResource(CacheEntryRemovedArguments arg)
+        {
+            if (arg.RemovedReason != CacheEntryRemovedReason.Removed)
+            {
+                if (arg.CacheItem.Value is IDisposable disposable)
+                    disposable.Dispose();
+
+                if (arg.CacheItem.Value is IAsyncDisposable asyncDisposable)
+                    asyncDisposable.DisposeAsync().GetAwaiter().GetResult();
+            }
         }
 
         private async Task<ServiceBusSender> GetSender(ExecutionContext executionContext, Guid providerDefinitionId, string containerName)
@@ -188,28 +216,22 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             var authDetails = await GetAuthenticationDetails(executionContext, providerDefinitionId);
             var config = new AzureServiceBusConnectorJobData(authDetails.Authentication);
 
-            return GetServiceBusResources(config.ConnectionString, config.Name, containerName).Value;
+            return GetServiceBusResources(config.ConnectionString, config.Name, containerName).ServiceBusSender;
         }
 
-        private KeyValuePair<ServiceBusClient, ServiceBusSender> GetServiceBusResources(string connectionString, string queueName, string containerName)
+        private ServiceBusResourcePair GetServiceBusResources(string connectionString, string queueName, string containerName)
         {
             var key = $"{connectionString}{queueName}{containerName}";
-            lock (_serviceBusResourcesCache)
+            lock (_serviceBusResourcesCacheLock)
             {
-                if (_serviceBusResourcesCache.TryGetValue(key, out var serviceBusResources))
-                    return serviceBusResources;
-                else
-                    return _serviceBusResourcesCache[key] = CreateServiceBusResources(connectionString, queueName, containerName);
+                if (!(_serviceBusResourcesCache.Get(key) is ServiceBusResourcePair resource))
+                {
+                    resource = new ServiceBusResourcePair(key, queueName, containerName);
+                    _serviceBusResourcesCache.Add(key, resource, _cacheItemPolicy);
+                }
+
+                return resource;
             }
-        }
-
-        private KeyValuePair<ServiceBusClient, ServiceBusSender> CreateServiceBusResources(string connectionString, string queueName, string containerName)
-        {
-            var client = new ServiceBusClient(connectionString);
-            var properties = ServiceBusConnectionStringProperties.Parse(connectionString);
-            var sender = client.CreateSender(queueName ?? properties.EntityPath ?? containerName);
-
-            return KeyValuePair.Create(client, sender);
         }
 
         #region NotImplementedMembers
