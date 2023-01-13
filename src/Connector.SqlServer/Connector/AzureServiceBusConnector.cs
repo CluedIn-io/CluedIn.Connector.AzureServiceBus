@@ -31,7 +31,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             _serviceBusResourcesCache = new MemoryCache($"{nameof(AzureServiceBusConnector)} cache");
             _cacheItemPolicy = new CacheItemPolicy
             {
-                AbsoluteExpiration = DateTimeOffset.UtcNow.AddHours(1),
+                AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(10),
                 RemovedCallback = DisposeCachedResource
             };
 
