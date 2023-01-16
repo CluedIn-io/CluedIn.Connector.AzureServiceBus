@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using CluedIn.Core;
-using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
 using CluedIn.Core.DataStore;
 using Microsoft.Extensions.Logging;
@@ -17,25 +16,23 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
     public class AzureServiceBusConnector : ConnectorBase, IDisposable
     {
         private readonly ILogger<AzureServiceBusConnector> _logger;
-        private readonly IApplicationCache _cache;
-        private readonly MemoryCache _serviceBusResourcesCache;
+        private readonly MemoryCache _cache;
         private readonly CacheItemPolicy _cacheItemPolicy;
-        private readonly object _serviceBusResourcesCacheLock;
+        private readonly object _cacheLock;
         private bool _disposed;
 
-        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(repo)
+        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger) : base(repo)
         {
             ProviderId = AzureServiceBusConstants.ProviderId;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _cache = cache;
-            _serviceBusResourcesCache = new MemoryCache($"{nameof(AzureServiceBusConnector)} cache");
+            _cache = new MemoryCache($"{nameof(AzureServiceBusConnector)} cache");
             _cacheItemPolicy = new CacheItemPolicy
             {
                 AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(10),
                 RemovedCallback = DisposeCachedResource
             };
 
-            _serviceBusResourcesCacheLock = new object();
+            _cacheLock = new object();
             _disposed = false;
         }
 
@@ -58,29 +55,27 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
             var key = $"CreateQueue-{properties.FullyQualifiedNamespace}-{properties.SharedAccessKeyName}-{model.Name}";
 
-            await _cache.GetItem(key, async () =>
+            //Using cache here to drop subsequent calls to create container untill next time window. 
+            if (!(_cache.Get(key) is bool))
+            {
+                try
                 {
-                    try
-                    {
-                        var client = new ServiceBusAdministrationClient(data.ConnectionString);
+                    var client = new ServiceBusAdministrationClient(data.ConnectionString);
+                    var exists = await client.QueueExistsAsync(model.Name);
 
-                        var exists = await client.QueueExistsAsync(model.Name);
+                    if (!exists)
+                        await client.CreateQueueAsync(model.Name);
 
-                        if (!exists)
-                        {
-                            await client.CreateQueueAsync(model.Name);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogTrace(ex, "Exception creating queue");
-                    }
-
-                    return await Task.FromResult(true);
-                },
-                true,
-                policy => policy.WithAbsoluteExpiration(DateTimeOffset.Now.AddDays(1)) // will never be able to create a queue without manage permissions so lets not try for a long time
-            );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogTrace(ex, "Exception creating queue");
+                }
+                finally
+                {
+                    _cache.Add(key, true, new CacheItemPolicy() { AbsoluteExpiration = DateTimeOffset.Now.AddDays(1) });
+                }
+            }
         }
 
         public override Task<string> GetValidDataTypeName(ExecutionContext executionContext, Guid providerDefinitionId, string name)
@@ -194,7 +189,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                 return;
 
             if (disposing)
-                _serviceBusResourcesCache.Dispose();
+                _cache.Dispose();
 
             _disposed = true;
         }
@@ -205,8 +200,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             {
                 if (arg.CacheItem.Value is IDisposable disposable)
                     disposable.Dispose();
-
-                if (arg.CacheItem.Value is IAsyncDisposable asyncDisposable)
+                else if (arg.CacheItem.Value is IAsyncDisposable asyncDisposable)
                     asyncDisposable.DisposeAsync().GetAwaiter().GetResult();
             }
         }
@@ -222,12 +216,12 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         private ServiceBusResourcePair GetServiceBusResources(string connectionString, string queueName, string containerName)
         {
             var key = $"{connectionString}{queueName}{containerName}";
-            lock (_serviceBusResourcesCacheLock)
+            lock (_cacheLock)
             {
-                if (!(_serviceBusResourcesCache.Get(key) is ServiceBusResourcePair resource))
+                if (!(_cache.Get(key) is ServiceBusResourcePair resource))
                 {
                     resource = new ServiceBusResourcePair(key, queueName, containerName);
-                    _serviceBusResourcesCache.Add(key, resource, _cacheItemPolicy);
+                    _cache.Add(key, resource, _cacheItemPolicy);
                 }
 
                 return resource;
