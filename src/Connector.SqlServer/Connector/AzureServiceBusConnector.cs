@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using CluedIn.Core;
+using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
 using CluedIn.Core.DataStore;
 using Microsoft.Extensions.Logging;
@@ -13,32 +13,16 @@ using ExecutionContext = CluedIn.Core.ExecutionContext;
 
 namespace CluedIn.Connector.AzureServiceBus.Connector
 {
-    public class AzureServiceBusConnector : ConnectorBase, IDisposable
+    public class AzureServiceBusConnector : ConnectorBase
     {
         private readonly ILogger<AzureServiceBusConnector> _logger;
-        private readonly MemoryCache _cache;
-        private readonly CacheItemPolicy _cacheItemPolicy;
-        private readonly object _cacheLock;
-        private bool _disposed;
+        private readonly IApplicationCache _cache;
 
-        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger) : base(repo)
+        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(repo)
         {
             ProviderId = AzureServiceBusConstants.ProviderId;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _cache = new MemoryCache($"{nameof(AzureServiceBusConnector)} cache");
-            _cacheItemPolicy = new CacheItemPolicy
-            {
-                AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(10),
-                RemovedCallback = DisposeCachedResource
-            };
-
-            _cacheLock = new object();
-            _disposed = false;
-        }
-
-        ~AzureServiceBusConnector()
-        {
-            Dispose(false);
+            _cache = cache;
         }
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid providerDefinitionId, CreateContainerModel model)
@@ -55,27 +39,49 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
             var key = $"CreateQueue-{properties.FullyQualifiedNamespace}-{properties.SharedAccessKeyName}-{model.Name}";
 
-            //Using cache here to drop subsequent calls to create container untill next time window. 
-            if (!(_cache.Get(key) is bool))
-            {
-                try
+            await _cache.GetItem(key, async () =>
                 {
-                    var client = new ServiceBusAdministrationClient(data.ConnectionString);
-                    var exists = await client.QueueExistsAsync(model.Name);
+                    try
+                    {
+                        var client = new ServiceBusAdministrationClient(data.ConnectionString);
 
-                    if (!exists)
-                        await client.CreateQueueAsync(model.Name);
+                        var exists = await client.QueueExistsAsync(model.Name);
 
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogTrace(ex, "Exception creating queue");
-                }
-                finally
-                {
-                    _cache.Add(key, true, new CacheItemPolicy() { AbsoluteExpiration = DateTimeOffset.Now.AddDays(1) });
-                }
-            }
+                        if (!exists)
+                        {
+                            await client.CreateQueueAsync(model.Name);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogTrace(ex, "Exception creating queue");
+                    }
+
+                    return await Task.FromResult(true);
+                },
+                true,
+                policy => policy.WithAbsoluteExpiration(DateTimeOffset.Now.AddDays(1)) // will never be able to create a queue without manage permissions so lets not try for a long time
+            );
+        }
+
+        public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        {
+            await Task.FromResult(0);
+        }
+
+        public override async Task ArchiveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        {
+            await Task.FromResult(0);
+        }
+
+        public override async Task RenameContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id, string newName)
+        {
+            await Task.FromResult(0);
+        }
+
+        public override async Task RemoveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        {
+            await Task.FromResult(0);
         }
 
         public override Task<string> GetValidDataTypeName(ExecutionContext executionContext, Guid providerDefinitionId, string name)
@@ -98,6 +104,16 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             {
                 return await Task.FromResult(name);
             }
+        }
+
+        public override async Task<IEnumerable<IConnectorContainer>> GetContainers(ExecutionContext executionContext, Guid providerDefinitionId)
+        {
+            return await Task.FromResult(new List<IConnectorContainer>());
+        }
+
+        public override async Task<IEnumerable<IConnectionDataType>> GetDataTypes(ExecutionContext executionContext, Guid providerDefinitionId, string containerId)
+        {
+            return await Task.FromResult(new List<IConnectionDataType>());
         }
 
         public override async Task<bool> VerifyConnection(ExecutionContext executionContext, Guid providerDefinitionId)
@@ -177,32 +193,9 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             }
         }
 
-        public void Dispose()
+        public override async Task StoreEdgeData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, string originEntityCode, IEnumerable<string> edges)
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposed)
-                return;
-
-            if (disposing)
-                _cache.Dispose();
-
-            _disposed = true;
-        }
-
-        private void DisposeCachedResource(CacheEntryRemovedArguments arg)
-        {
-            if (arg.RemovedReason != CacheEntryRemovedReason.Removed)
-            {
-                if (arg.CacheItem.Value is IDisposable disposable)
-                    disposable.Dispose();
-                else if (arg.CacheItem.Value is IAsyncDisposable asyncDisposable)
-                    asyncDisposable.DisposeAsync().GetAwaiter().GetResult();
-            }
+            await Task.FromResult(0);
         }
 
         private async Task<ServiceBusSender> GetSender(ExecutionContext executionContext, Guid providerDefinitionId, string containerName)
@@ -210,59 +203,29 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             var authDetails = await GetAuthenticationDetails(executionContext, providerDefinitionId);
             var config = new AzureServiceBusConnectorJobData(authDetails.Authentication);
 
-            return GetServiceBusResources(config.ConnectionString, config.Name, containerName).ServiceBusSender;
-        }
+            var key = $"{config.ConnectionString}-{config.Name}-{containerName}";
 
-        private ServiceBusResourcePair GetServiceBusResources(string connectionString, string queueName, string containerName)
-        {
-            var key = $"{connectionString}{queueName}{containerName}";
-            lock (_cacheLock)
-            {
-                if (!(_cache.Get(key) is ServiceBusResourcePair resource))
+            return _cache.GetItem(key, () =>
                 {
-                    resource = new ServiceBusResourcePair(key, queueName, containerName);
-                    _cache.Add(key, resource, _cacheItemPolicy);
-                }
+                    try
+                    {
+                        var client = new ServiceBusClient(config.ConnectionString);
 
-                return resource;
-            }
-        }
+                        var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
+                        
+                        var sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
 
-        #region NotImplementedMembers
-        public override async Task StoreEdgeData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, string originEntityCode, IEnumerable<string> edges)
-        {
-            await Task.FromResult(0);
+                        return sender;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogTrace(ex, "Exception creating queue");
+                        throw;
+                    }
+                },
+                true,
+                policy => policy.WithAbsoluteExpiration(DateTimeOffset.Now.AddMinutes(10))
+            );
         }
-
-        public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task ArchiveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task RenameContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id, string newName)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task RemoveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task<IEnumerable<IConnectorContainer>> GetContainers(ExecutionContext executionContext, Guid providerDefinitionId)
-        {
-            return await Task.FromResult(new List<IConnectorContainer>());
-        }
-
-        public override async Task<IEnumerable<IConnectionDataType>> GetDataTypes(ExecutionContext executionContext, Guid providerDefinitionId, string containerId)
-        {
-            return await Task.FromResult(new List<IConnectionDataType>());
-        }
-        #endregion
     }
 }
