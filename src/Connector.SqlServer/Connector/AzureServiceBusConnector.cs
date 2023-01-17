@@ -219,7 +219,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogTrace(ex, "Exception creating queue");
+                        _logger.LogTrace(ex, "Exception creating sender");
                         throw;
                     }
                 },
