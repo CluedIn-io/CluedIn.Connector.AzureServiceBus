@@ -203,7 +203,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             var authDetails = await GetAuthenticationDetails(executionContext, providerDefinitionId);
             var config = new AzureServiceBusConnectorJobData(authDetails.Authentication);
 
-            var key = $"{config.ConnectionString}-{config.Name}-{containerName}";
+            var key = $"GetSender-{config.ConnectionString}-{config.Name}-{containerName}";
 
             return _cache.GetItem(key, () =>
                 {
