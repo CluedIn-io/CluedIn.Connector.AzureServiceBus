@@ -210,8 +210,8 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                 {
                     if (value is (ServiceBusClient client, ServiceBusSender sender))
                     {
-                        client.DisposeAsync();
-                        sender.DisposeAsync();
+                        sender.DisposeAsync().GetAwaiter().GetResult();
+                        client.DisposeAsync().GetAwaiter().GetResult();
                     }
                 });
 
