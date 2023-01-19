@@ -40,6 +40,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             var container = new WindsorContainer();
             container.Register(Component.For<IWindsorContainer>().Instance(container));
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
+            container.Register(Component.For<IMemoryCacheFactory>().ImplementedBy<MemoryCacheFactory>());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
             var executionContext = container.Resolve<ExecutionContext>();
@@ -201,6 +202,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             var container = new WindsorContainer();
             container.Register(Component.For<IWindsorContainer>().Instance(container));
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
+            container.Register(Component.For<IMemoryCacheFactory>().ImplementedBy<MemoryCacheFactory>());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
             var executionContext = container.Resolve<ExecutionContext>();

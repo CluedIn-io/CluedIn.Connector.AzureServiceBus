@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using CluedIn.Core;
-using CluedIn.Core.Caching;
+using Microsoft.Extensions.Caching.Memory;
 using CluedIn.Core.Connectors;
 using CluedIn.Core.DataStore;
 using Microsoft.Extensions.Logging;
@@ -13,16 +13,16 @@ using ExecutionContext = CluedIn.Core.ExecutionContext;
 
 namespace CluedIn.Connector.AzureServiceBus.Connector
 {
-    public class AzureServiceBusConnector : ConnectorBase
+    public class AzureServiceBusConnector : ConnectorBase, IDisposable
     {
         private readonly ILogger<AzureServiceBusConnector> _logger;
-        private readonly IApplicationCache _cache;
+        private readonly IMemoryCache _memoryCache;
 
-        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(repo)
+        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IMemoryCacheFactory memoryCacheFactory) : base(repo)
         {
             ProviderId = AzureServiceBusConstants.ProviderId;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _cache = cache;
+            _memoryCache = memoryCacheFactory.Create(new MemoryCacheOptions());
         }
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid providerDefinitionId, CreateContainerModel model)
@@ -39,29 +39,27 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
             var key = $"CreateQueue-{properties.FullyQualifiedNamespace}-{properties.SharedAccessKeyName}-{model.Name}";
 
-            await _cache.GetItem(key, async () =>
+            await _memoryCache.GetOrCreate(key, async cacheEntry =>
+            {
+                cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1);   // will never be able to create a queue without manage permissions so lets not try for a long time
+                cacheEntry.Value = true;
+
+                try
                 {
-                    try
+                    var client = new ServiceBusAdministrationClient(data.ConnectionString);
+
+                    var exists = await client.QueueExistsAsync(model.Name);
+
+                    if (!exists)
                     {
-                        var client = new ServiceBusAdministrationClient(data.ConnectionString);
-
-                        var exists = await client.QueueExistsAsync(model.Name);
-
-                        if (!exists)
-                        {
-                            await client.CreateQueueAsync(model.Name);
-                        }
+                        await client.CreateQueueAsync(model.Name);
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogTrace(ex, "Exception creating queue");
-                    }
-
-                    return await Task.FromResult(true);
-                },
-                true,
-                policy => policy.WithAbsoluteExpiration(DateTimeOffset.Now.AddDays(1)) // will never be able to create a queue without manage permissions so lets not try for a long time
-            );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogTrace(ex, "Exception creating queue");
+                }
+            });
         }
 
         public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
@@ -180,14 +178,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, IDictionary<string, object> data)
         {
-            var details = await GetAuthenticationDetails(executionContext, providerDefinitionId);
-            var config = new AzureServiceBusConnectorJobData(details.Authentication);
-
-            await using var client = new ServiceBusClient(config.ConnectionString);
-
-            var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
-
-            var sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
+            var sender = await GetSender(executionContext, providerDefinitionId, containerName);
             var message = new ServiceBusMessage(JsonUtility.Serialize(data));
 
             try
@@ -198,15 +189,53 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             {
                 executionContext.Log.LogError(exc, "Could not send event to Azure Service Bus.");
             }
-            finally
-            {
-                await client.DisposeAsync();
-            }
         }
 
         public override async Task StoreEdgeData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, string originEntityCode, IEnumerable<string> edges)
         {
             await Task.FromResult(0);
+        }
+
+        private async Task<ServiceBusSender> GetSender(ExecutionContext executionContext, Guid providerDefinitionId, string containerName)
+        {
+            var authDetails = await GetAuthenticationDetails(executionContext, providerDefinitionId);
+            var config = new AzureServiceBusConnectorJobData(authDetails.Authentication);
+
+            var key = $"GetSender-{config.ConnectionString}-{config.Name}-{containerName}";
+
+            return _memoryCache.GetOrCreate(key, entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+                entry.RegisterPostEvictionCallback((_, value, reason, state) =>
+                {
+                    if (value is (ServiceBusClient client, ServiceBusSender sender))
+                    {
+                        sender.DisposeAsync();
+                        client.DisposeAsync();
+                    }
+                });
+
+                try
+                {
+                    var client = new ServiceBusClient(config.ConnectionString);
+
+                    var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
+
+                    var sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
+
+                    return (client, sender);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogTrace(ex, "Exception creating sender");
+                    throw;
+                }
+            }).sender;
+        }
+
+        public void Dispose()
+        {
+            _memoryCache?.Dispose();
         }
     }
 }
