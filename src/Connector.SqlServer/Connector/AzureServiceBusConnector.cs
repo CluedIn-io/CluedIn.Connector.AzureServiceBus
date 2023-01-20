@@ -62,6 +62,26 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             });
         }
 
+        public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        {
+            await Task.CompletedTask;
+        }
+
+        public override async Task ArchiveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        {
+            await Task.CompletedTask;
+        }
+
+        public override async Task RenameContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id, string newName)
+        {
+            await Task.CompletedTask;
+        }
+
+        public override async Task RemoveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        {
+            await Task.CompletedTask;
+        }
+
         public override Task<string> GetValidDataTypeName(ExecutionContext executionContext, Guid providerDefinitionId, string name)
         {
             // Strip non-alpha numeric characters
@@ -82,6 +102,16 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             {
                 return await Task.FromResult(name);
             }
+        }
+
+        public override async Task<IEnumerable<IConnectorContainer>> GetContainers(ExecutionContext executionContext, Guid providerDefinitionId)
+        {
+            return await Task.FromResult(new List<IConnectorContainer>());
+        }
+
+        public override async Task<IEnumerable<IConnectionDataType>> GetDataTypes(ExecutionContext executionContext, Guid providerDefinitionId, string containerId)
+        {
+            return await Task.FromResult(new List<IConnectionDataType>());
         }
 
         public override async Task<bool> VerifyConnection(ExecutionContext executionContext, IDictionary<string, object> config)
@@ -156,7 +186,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task StoreEdgeData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, string originEntityCode, IEnumerable<string> edges)
         {
-            await Task.FromResult(0);
+            await Task.CompletedTask;
         }
 
         private async Task<ServiceBusSender> GetSender(ExecutionContext executionContext, Guid providerDefinitionId, string containerName)
@@ -200,37 +230,5 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         {
             _memoryCache?.Dispose();
         }
-
-        #region NotImplementedMembers
-        public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task ArchiveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task RenameContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id, string newName)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task RemoveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
-        {
-            await Task.FromResult(0);
-        }
-
-        public override async Task<IEnumerable<IConnectorContainer>> GetContainers(ExecutionContext executionContext, Guid providerDefinitionId)
-        {
-            return await Task.FromResult(new List<IConnectorContainer>());
-        }
-
-        public override async Task<IEnumerable<IConnectionDataType>> GetDataTypes(ExecutionContext executionContext, Guid providerDefinitionId, string containerId)
-        {
-            return await Task.FromResult(new List<IConnectionDataType>());
-        }
-        #endregion
     }
 }
