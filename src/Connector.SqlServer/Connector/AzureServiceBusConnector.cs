@@ -64,22 +64,22 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
         {
-            await Task.FromResult(0);
+            await Task.CompletedTask;
         }
 
         public override async Task ArchiveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
         {
-            await Task.FromResult(0);
+            await Task.CompletedTask;
         }
 
         public override async Task RenameContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id, string newName)
         {
-            await Task.FromResult(0);
+            await Task.CompletedTask;
         }
 
         public override async Task RemoveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
         {
-            await Task.FromResult(0);
+            await Task.CompletedTask;
         }
 
         public override Task<string> GetValidDataTypeName(ExecutionContext executionContext, Guid providerDefinitionId, string name)
@@ -112,13 +112,6 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         public override async Task<IEnumerable<IConnectionDataType>> GetDataTypes(ExecutionContext executionContext, Guid providerDefinitionId, string containerId)
         {
             return await Task.FromResult(new List<IConnectionDataType>());
-        }
-
-        public override async Task<bool> VerifyConnection(ExecutionContext executionContext, Guid providerDefinitionId)
-        {
-            var config = await GetAuthenticationDetails(executionContext, providerDefinitionId);
-
-            return await VerifyConnection(executionContext, config.Authentication);
         }
 
         public override async Task<bool> VerifyConnection(ExecutionContext executionContext, IDictionary<string, object> config)
@@ -193,7 +186,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task StoreEdgeData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, string originEntityCode, IEnumerable<string> edges)
         {
-            await Task.FromResult(0);
+            await Task.CompletedTask;
         }
 
         private async Task<ServiceBusSender> GetSender(ExecutionContext executionContext, Guid providerDefinitionId, string containerName)
