@@ -19,7 +19,6 @@
     <PackageReference Include="Dapper" />
     <PackageReference Include="Dapper.SqlBuilder" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" />
-	<PackageReference Include="CluedIn.Connector.Common" />
   </ItemGroup>
 
   <!-- Disable to above cluedin assets and enable the below for local debugging  -->

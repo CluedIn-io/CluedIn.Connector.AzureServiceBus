@@ -45,7 +45,6 @@
     <PackageReference Update="Dapper" Version="2.0.35" />
     <PackageReference Update="Dapper.SqlBuilder" Version="2.0.35" />
     <PackageReference Update="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
-    <PackageReference Update="CluedIn.Connector.Common" Version="3.4.0" />
   </ItemGroup>
   <ItemGroup Label="Global tools">
     <!--
