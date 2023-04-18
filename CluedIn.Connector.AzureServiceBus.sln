@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.28803.452
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B2A52533-7FBF-41FE-A0AF-874FC54300B2}"
 	ProjectSection(SolutionItems) = preProject
@@ -52,6 +52,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Connector.AzureServiceBus",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Connector.AzureServiceBus.Unit.Tests", "test\unit\Connector.SqlServer.Test\Connector.AzureServiceBus.Unit.Tests.csproj", "{8B1A895D-5108-4494-914E-F8FEEC53076A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Connector.AzureServiceBus.Integration.Tests", "test\integration\Connector.AzureServiceBus.Integration.Tests\Connector.AzureServiceBus.Integration.Tests.csproj", "{8FCD7340-2730-41D5-9E26-E8BE29AF88D8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -66,6 +68,10 @@ Global
 		{8B1A895D-5108-4494-914E-F8FEEC53076A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8B1A895D-5108-4494-914E-F8FEEC53076A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8B1A895D-5108-4494-914E-F8FEEC53076A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8FCD7340-2730-41D5-9E26-E8BE29AF88D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8FCD7340-2730-41D5-9E26-E8BE29AF88D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8FCD7340-2730-41D5-9E26-E8BE29AF88D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8FCD7340-2730-41D5-9E26-E8BE29AF88D8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -80,6 +86,7 @@ Global
 		{17EE3C8D-BAE4-481A-B9CC-1BE878E86124} = {9BD54E81-D9C8-4419-82B8-8EE6CC7E2647}
 		{ED656EF9-9D15-45CA-B505-AF48AD8D0145} = {B2A52533-7FBF-41FE-A0AF-874FC54300B2}
 		{8B1A895D-5108-4494-914E-F8FEEC53076A} = {A32B6852-82C7-4107-8C68-AE9232289E09}
+		{8FCD7340-2730-41D5-9E26-E8BE29AF88D8} = {DBD1964B-DBD9-4C70-96CA-391C34B3D75F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6A61CB42-80C5-4A83-AC3E-DA41FC875525}
