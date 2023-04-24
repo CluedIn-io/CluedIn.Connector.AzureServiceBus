@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup Label="Compilation Metadata">
     <TargetFramework>netcoreapp3.1</TargetFramework>
+	<LangVersion>11.0</LangVersion>
   </PropertyGroup>
 
   <!-- TODO: Clean up warnings -->
