@@ -173,11 +173,39 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task<SaveResult> StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, ConnectorEntityData connectorEntityData)
         {
-            var data = connectorEntityData.Properties.ToDictionary(x => x.Name, x => x.Value);
+            var d = new Dictionary<string, object> { { "a", "B" } };
+            // matching output format of previous version of the connector
+            var data = connectorEntityData.Properties.ToDictionary(x => GetValidMappingDestinationPropertyName(executionContext, providerDefinitionId, x.Name).Result, x => x.Value);
+            data.Add("Id", connectorEntityData.EntityId);
+            data.Add("Codes",
+                new Dictionary<string, object>
+                {
+                    {
+                        "$type",
+                        "System.Collections.Generic.List`1[[System.Object, System.Private.CoreLib]], System.Private.CoreLib"
+                    },
+                    { "$values", connectorEntityData.EntityCodes.Select(c => c.ToString()) }
+                });
+            if (connectorEntityData.PersistInfo != null)
+            {
+                data.Add("PersistHash", connectorEntityData.PersistInfo.PersistHash);
+            }
+
+            if (connectorEntityData.OriginEntityCode != null)
+            {
+                data.Add("OriginEntityCode", connectorEntityData.OriginEntityCode.ToString());
+            }
+
+            if (connectorEntityData.EntityType != null)
+            {
+                data.Add("EntityType", connectorEntityData.EntityType.ToString());
+            }
+            // end match previous version of the connector
+
             var jsonSerializer = new JsonSerializer { TypeNameHandling = TypeNameHandling.None };
 
-            data.Add("_OutgoingEdges", connectorEntityData.OutgoingEdges);
-            data.Add("_IncomingEdges", connectorEntityData.IncomingEdges);
+            data.Add("OutgoingEdges", connectorEntityData.OutgoingEdges);
+            data.Add("IncomingEdges", connectorEntityData.IncomingEdges);
 
             var details = await GetAuthenticationDetails(executionContext, providerDefinitionId);
             var config = new AzureServiceBusConnectorJobData(details.Authentication);
