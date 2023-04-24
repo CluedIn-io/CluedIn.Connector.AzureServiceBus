@@ -5,7 +5,7 @@
     <_EntityFramework>3.1.5</_EntityFramework>
     <_MicrosoftExtensions>3.1.5</_MicrosoftExtensions>
     <_AutoFixture>4.11.0</_AutoFixture>
-    <_CluedIn>3.4.0-*</_CluedIn>
+    <_CluedIn>3.6.0-*</_CluedIn>
   </PropertyGroup>
   <ItemGroup>
     <!--

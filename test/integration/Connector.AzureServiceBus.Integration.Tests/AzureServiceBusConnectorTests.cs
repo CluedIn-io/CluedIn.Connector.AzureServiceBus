@@ -10,6 +10,9 @@ using Castle.Windsor;
 using CluedIn.Connector.AzureServiceBus.Connector;
 using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
+using CluedIn.Core.Data;
+using CluedIn.Core.Data.Parts;
+using CluedIn.Core.Streams.Models;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
@@ -48,8 +51,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
                     .Select(p => container.Resolve(p.ParameterType)).ToArray());
 
-            var model = new CreateContainerModel();
-            model.Name = "TEST_" + Guid.NewGuid();
+            var model = new CreateContainerModelV2("TEST_" + Guid.NewGuid(), null, ExistingContainerActionEnum.Overwrite, true);
 
             var connectionMock = new Mock<IConnectorConnection>();
             connectionMock.Setup(x => x.Authentication).Returns(new Dictionary<string, object>
@@ -99,29 +101,20 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
+            container.Register(Component.For<AzureServiceBusConnector>());
+
             var executionContext = container.Resolve<ExecutionContext>();
+            
+            var connector = container.Resolve<AzureServiceBusConnector>();
 
-            var connectorMock = new Mock<AzureServiceBusConnector>(MockBehavior.Default,
-                typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
-                    .Select(p => container.Resolve(p.ParameterType)).ToArray());
-
-            var connectionMock = new Mock<IConnectorConnection>();
-            connectionMock.Setup(x => x.Authentication).Returns(new Dictionary<string, object>
+            // act
+            var valid = await connector.VerifyConnection(executionContext, new Dictionary<string, object>
             {
                 { AzureServiceBusConstants.KeyName.ConnectionString, RootConnectionString }
             });
 
-            connectorMock.CallBase = true;
-            connectorMock.Setup(x => x.GetAuthenticationDetails(executionContext, Guid.Empty))
-                .ReturnsAsync(connectionMock.Object);
-
-            var connector = connectorMock.Object;
-
-            // act
-            var valid = await connector.VerifyConnection(executionContext, Guid.Empty);
-
             // assert
-            Assert.True(valid);
+            Assert.True(valid.Success);
         }
 
         [Theory]
@@ -157,7 +150,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             var valid = await connector.VerifyConnection(executionContext, Guid.Empty);
 
             // assert
-            Assert.False(valid);
+            Assert.False(valid.Success);
         }
 
         [Fact]
@@ -169,29 +162,20 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
+            container.Register(Component.For<AzureServiceBusConnector>());
+
             var executionContext = container.Resolve<ExecutionContext>();
+            
+            var connector = container.Resolve<AzureServiceBusConnector>();
 
-            var connectorMock = new Mock<AzureServiceBusConnector>(MockBehavior.Default,
-                typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
-                    .Select(p => container.Resolve(p.ParameterType)).ToArray());
-
-            var connectionMock = new Mock<IConnectorConnection>();
-            connectionMock.Setup(x => x.Authentication).Returns(new Dictionary<string, object>
+            // act
+            var valid = await connector.VerifyConnection(executionContext, new Dictionary<string, object>
             {
                 { AzureServiceBusConstants.KeyName.ConnectionString, TestQueueConnectionString }
             });
 
-            connectorMock.CallBase = true;
-            connectorMock.Setup(x => x.GetAuthenticationDetails(executionContext, Guid.Empty))
-                .ReturnsAsync(connectionMock.Object);
-
-            var connector = connectorMock.Object;
-
-            // act
-            var valid = await connector.VerifyConnection(executionContext, Guid.Empty);
-
             // assert
-            Assert.True(valid);
+            Assert.True(valid.Success);
         }
 
         [Fact]
@@ -225,7 +209,11 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
 
             // act
             await connector.StoreData(executionContext, Guid.Empty, null,
-                new Dictionary<string, object> { { "id", id } });
+                new ConnectorEntityData(VersionChangeType.Added, StreamMode.Sync, Guid.NewGuid(), null, null, null, null, new[]
+                {
+                    new ConnectorPropertyData("id", id,
+                        new EntityPropertyConnectorPropertyDataType(typeof(string)))
+                }, new IEntityCode[] { }, new EntityEdge[] { }, new EntityEdge[] { }));
 
             // assert
             var client = new ServiceBusClient(RootConnectionString);
