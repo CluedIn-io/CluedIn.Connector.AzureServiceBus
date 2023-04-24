@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -8,24 +9,28 @@ using CluedIn.Core;
 using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
 using CluedIn.Core.DataStore;
+using CluedIn.Core.Processing;
+using CluedIn.Core.Streams.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using ExecutionContext = CluedIn.Core.ExecutionContext;
 
 namespace CluedIn.Connector.AzureServiceBus.Connector
 {
-    public class AzureServiceBusConnector : ConnectorBase
+    public class AzureServiceBusConnector : ConnectorBaseV2
     {
+        private readonly IConfigurationRepository _configurationRepository;
         private readonly ILogger<AzureServiceBusConnector> _logger;
         private readonly IApplicationCache _cache;
 
-        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(repo)
+        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(AzureServiceBusConstants.ProviderId)
         {
-            ProviderId = AzureServiceBusConstants.ProviderId;
+            _configurationRepository = repo;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cache = cache;
         }
 
-        public override async Task CreateContainer(ExecutionContext executionContext, Guid providerDefinitionId, CreateContainerModel model)
+        public override async Task CreateContainer(ExecutionContext executionContext, Guid providerDefinitionId, CreateContainerModelV2 model)
         {
             var config = await GetAuthenticationDetails(executionContext, providerDefinitionId);
             var data = new AzureServiceBusConnectorJobData(config.Authentication);
@@ -84,7 +89,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             await Task.FromResult(0);
         }
 
-        public override Task<string> GetValidDataTypeName(ExecutionContext executionContext, Guid providerDefinitionId, string name)
+        public override Task<string> GetValidMappingDestinationPropertyName(ExecutionContext executionContext, Guid providerDefinitionId, string name)
         {
             // Strip non-alpha numeric characters
             var result = Regex.Replace(name, @"[^A-Za-z0-9]+", "");
@@ -111,19 +116,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             return await Task.FromResult(new List<IConnectorContainer>());
         }
 
-        public override async Task<IEnumerable<IConnectionDataType>> GetDataTypes(ExecutionContext executionContext, Guid providerDefinitionId, string containerId)
-        {
-            return await Task.FromResult(new List<IConnectionDataType>());
-        }
-
-        public override async Task<bool> VerifyConnection(ExecutionContext executionContext, Guid providerDefinitionId)
-        {
-            var config = await GetAuthenticationDetails(executionContext, providerDefinitionId);
-
-            return await VerifyConnection(executionContext, config.Authentication);
-        }
-
-        public override async Task<bool> VerifyConnection(ExecutionContext executionContext, IDictionary<string, object> config)
+        public override async Task<ConnectionVerificationResult> VerifyConnection(ExecutionContext executionContext, IDictionary<string, object> config)
         {
             var data = new AzureServiceBusConnectorJobData(config);
 
@@ -135,7 +128,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             }
             catch
             {
-                return false;
+                return new ConnectionVerificationResult(false, "Invalid connection string");
             }
 
             var queueName = data.Name ?? properties.EntityPath;
@@ -155,7 +148,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
                     if (!ex.Message.Contains("claims required")) // token's in the connection string must be valid if we get a claims required message
                     {
-                        return false;
+                        return new ConnectionVerificationResult(false);
                     }
                 }
             }
@@ -171,15 +164,21 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                 catch (Exception ex)
                 {
                     _logger.LogInformation(ex, $"{nameof(VerifyConnection)} failed for {nameof(AzureServiceBusConnector)}");
-                    return false;
+                    return new ConnectionVerificationResult(false);
                 }
             }
 
-            return true;
+            return new ConnectionVerificationResult(true);
         }
 
-        public override async Task StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, IDictionary<string, object> data)
+        public override async Task<SaveResult> StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, ConnectorEntityData connectorEntityData)
         {
+            var data = connectorEntityData.Properties.ToDictionary(x => x.Name, x => x.Value);
+            var jsonSerializer = new JsonSerializer { TypeNameHandling = TypeNameHandling.None };
+
+            data.Add("_OutgoingEdges", connectorEntityData.OutgoingEdges);
+            data.Add("_IncomingEdges", connectorEntityData.IncomingEdges);
+
             var details = await GetAuthenticationDetails(executionContext, providerDefinitionId);
             var config = new AzureServiceBusConnectorJobData(details.Authentication);
 
@@ -188,25 +187,47 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
 
             var sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
-            var message = new ServiceBusMessage(JsonUtility.Serialize(data));
+            var message = new ServiceBusMessage(JsonUtility.Serialize(data, jsonSerializer));
 
-            try
-            {
-                await ActionExtensions.ExecuteWithRetryAsync(() => sender.SendMessageAsync(message));
-            }
-            catch (Exception exc)
-            {
-                executionContext.Log.LogError(exc, "Could not send event to Azure Service Bus.");
-            }
-            finally
-            {
-                await client.DisposeAsync();
-            }
+            await ActionExtensions.ExecuteWithRetryAsync(() => sender.SendMessageAsync(message));
+
+            return SaveResult.Success;
         }
 
-        public override async Task StoreEdgeData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, string originEntityCode, IEnumerable<string> edges)
+        public virtual Task<IConnectorConnection> GetAuthenticationDetails(ExecutionContext executionContext, Guid providerDefinitionId)
         {
-            await Task.FromResult(0);
+            var key = $"AuthenticationDetails_{providerDefinitionId}";
+            ICachePolicy GetPolicy(ICachePolicy cachePolicy) => new CachePolicy { SlidingExpiration = new TimeSpan(0, 0, 1, 0) };
+
+            var result = executionContext.ApplicationContext.System.Cache.GetItem(key, () =>
+            {
+                var dictionary = _configurationRepository.GetConfigurationById(executionContext, providerDefinitionId);
+
+                return new ConnectorConnectionBase { Authentication = dictionary };
+            }, cachePolicy: GetPolicy);
+
+            return Task.FromResult(result as IConnectorConnection);
+        }
+
+        public override Task<ConnectorLatestEntityPersistInfo> GetLatestEntityPersistInfo(ExecutionContext executionContext, Guid providerDefinitionId, string containerName,
+            Guid entityId)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override Task<IAsyncEnumerable<ConnectorLatestEntityPersistInfo>> GetLatestEntityPersistInfos(ExecutionContext executionContext, Guid providerDefinitionId, string containerName)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override IReadOnlyCollection<StreamMode> GetSupportedModes()
+        {
+            return new[] { StreamMode.Sync };
+        }
+
+        public override Task VerifyExistingContainer(ExecutionContext executionContext, StreamModel stream)
+        {
+            return Task.FromResult(0);
         }
     }
 }
