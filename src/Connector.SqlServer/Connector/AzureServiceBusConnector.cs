@@ -173,7 +173,6 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task<SaveResult> StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, ConnectorEntityData connectorEntityData)
         {
-            var d = new Dictionary<string, object> { { "a", "B" } };
             // matching output format of previous version of the connector
             var data = connectorEntityData.Properties.ToDictionary(x => GetValidMappingDestinationPropertyName(executionContext, providerDefinitionId, x.Name).Result, x => x.Value);
             data.Add("Id", connectorEntityData.EntityId);
