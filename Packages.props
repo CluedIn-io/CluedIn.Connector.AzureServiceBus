@@ -28,6 +28,7 @@
     <PackageReference Update="Microsoft.EntityFrameworkCore" version="$(_EntityFramework)" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.InMemory" version="$(_EntityFramework)" />
 	<PackageReference Update="coverlet.collector" Version="1.2.0" />
+	<PackageReference Update="FluentAssertions" Version="6.11.0" />
   </ItemGroup>
   <ItemGroup>
     <!--

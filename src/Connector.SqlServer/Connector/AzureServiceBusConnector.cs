@@ -9,6 +9,7 @@ using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
 using CluedIn.Core.DataStore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using ExecutionContext = CluedIn.Core.ExecutionContext;
 
 namespace CluedIn.Connector.AzureServiceBus.Connector
@@ -188,7 +189,9 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
 
             var sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
-            var message = new ServiceBusMessage(JsonUtility.Serialize(data));
+            var message =
+                new ServiceBusMessage(JsonUtility.Serialize(data,
+                    new JsonSerializer() { Formatting = Formatting.Indented }));
 
             try
             {

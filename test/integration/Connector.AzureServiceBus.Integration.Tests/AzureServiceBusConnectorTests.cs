@@ -10,6 +10,7 @@ using Castle.Windsor;
 using CluedIn.Connector.AzureServiceBus.Connector;
 using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
+using FluentAssertions;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
@@ -221,11 +222,20 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
 
             var connector = connectorMock.Object;
 
-            var id = Guid.NewGuid().ToString();
+            var id = Guid.Parse("69e26b81-bcbf-54f7-af97-be056f73bf9a").ToString();
+
+
+            var data = new Dictionary<string, object>();
+            data.Add("user.lastName", "Picard");
+            data.Add("Name", "Jean Luc Picard");
+            data.Add("Id", id);
+            data.Add("PersistHash", "1lzghdhhgqlnucj078/77q==");
+            data.Add("OriginEntityCode", "/Person#Acceptance:7c5591cf-861a-4642-861d-3b02485854a0");
+            data.Add("EntityType", "/Person");
+            data.Add("Codes", new[] { "/Person#Acceptance:7c5591cf-861a-4642-861d-3b02485854a0" });
 
             // act
-            await connector.StoreData(executionContext, Guid.Empty, null,
-                new Dictionary<string, object> { { "id", id } });
+            await connector.StoreData(executionContext, Guid.Empty, "test_container", data);
 
             // assert
             var client = new ServiceBusClient(RootConnectionString);
@@ -234,11 +244,13 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             var evt = new AutoResetEvent(false);
 
             string receivedId = null;
+            string receivedBody = null;
 
             processor.ProcessMessageAsync += async arg =>
             {
-                dynamic msg = JsonConvert.DeserializeObject(arg.Message.Body.ToString());
-                receivedId = msg.id;
+                receivedBody = arg.Message.Body.ToString();
+                dynamic msg = JsonConvert.DeserializeObject(receivedBody);
+                receivedId = msg.Id;
                 if (receivedId == id)
                 {
                     evt.Set();
@@ -255,7 +267,17 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
 
             await processor.StopProcessingAsync();
 
-            Assert.Equal(id, receivedId);
+            receivedBody.Should().Be(@"{
+  ""user.lastName"": ""Picard"",
+  ""Name"": ""Jean Luc Picard"",
+  ""Id"": ""69e26b81-bcbf-54f7-af97-be056f73bf9a"",
+  ""PersistHash"": ""1lzghdhhgqlnucj078/77q=="",
+  ""OriginEntityCode"": ""/Person#Acceptance:7c5591cf-861a-4642-861d-3b02485854a0"",
+  ""EntityType"": ""/Person"",
+  ""Codes"": [
+    ""/Person#Acceptance:7c5591cf-861a-4642-861d-3b02485854a0""
+  ]
+}");
         }
     }
 }
