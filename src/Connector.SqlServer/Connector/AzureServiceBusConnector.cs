@@ -174,17 +174,9 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         public override async Task<SaveResult> StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, ConnectorEntityData connectorEntityData)
         {
             // matching output format of previous version of the connector
-            var data = connectorEntityData.Properties.ToDictionary(x => GetValidMappingDestinationPropertyName(executionContext, providerDefinitionId, x.Name).Result, x => x.Value);
+            var data = connectorEntityData.Properties.ToDictionary(x => x.Name, x => x.Value);
             data.Add("Id", connectorEntityData.EntityId);
-            data.Add("Codes",
-                new Dictionary<string, object>
-                {
-                    {
-                        "$type",
-                        "System.Collections.Generic.List`1[[System.Object, System.Private.CoreLib]], System.Private.CoreLib"
-                    },
-                    { "$values", connectorEntityData.EntityCodes.Select(c => c.ToString()) }
-                });
+            
             if (connectorEntityData.PersistInfo != null)
             {
                 data.Add("PersistHash", connectorEntityData.PersistInfo.PersistHash);
@@ -199,12 +191,20 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             {
                 data.Add("EntityType", connectorEntityData.EntityType.ToString());
             }
+            data.Add("Codes", connectorEntityData.EntityCodes.Select(c => c.ToString()));
             // end match previous version of the connector
 
-            var jsonSerializer = new JsonSerializer { TypeNameHandling = TypeNameHandling.None };
+            if (connectorEntityData.OutgoingEdges.SafeEnumerate().Any())
+            {
+                data.Add("OutgoingEdges", connectorEntityData.OutgoingEdges);
+            }
 
-            data.Add("OutgoingEdges", connectorEntityData.OutgoingEdges);
-            data.Add("IncomingEdges", connectorEntityData.IncomingEdges);
+            if (connectorEntityData.IncomingEdges.SafeEnumerate().Any())
+            {
+                data.Add("IncomingEdges", connectorEntityData.IncomingEdges);
+            }
+
+            data.Add("ChangeType", connectorEntityData.ChangeType.ToString());
 
             var details = await GetAuthenticationDetails(executionContext, providerDefinitionId);
             var config = new AzureServiceBusConnectorJobData(details.Authentication);
@@ -214,26 +214,18 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
 
             var sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
-            var message = new ServiceBusMessage(JsonUtility.Serialize(data, jsonSerializer));
+            var message =
+                new ServiceBusMessage(JsonUtility.Serialize(data,
+                    new JsonSerializer() { Formatting = Formatting.Indented }));
 
             await ActionExtensions.ExecuteWithRetryAsync(() => sender.SendMessageAsync(message));
 
             return SaveResult.Success;
         }
 
-        public virtual Task<IConnectorConnection> GetAuthenticationDetails(ExecutionContext executionContext, Guid providerDefinitionId)
+        public virtual async Task<IConnectorConnection> GetAuthenticationDetails(ExecutionContext executionContext, Guid providerDefinitionId)
         {
-            var key = $"AuthenticationDetails_{providerDefinitionId}";
-            ICachePolicy GetPolicy(ICachePolicy cachePolicy) => new CachePolicy { SlidingExpiration = new TimeSpan(0, 0, 1, 0) };
-
-            var result = executionContext.ApplicationContext.System.Cache.GetItem(key, () =>
-            {
-                var dictionary = _configurationRepository.GetConfigurationById(executionContext, providerDefinitionId);
-
-                return new ConnectorConnectionBase { Authentication = dictionary };
-            }, cachePolicy: GetPolicy);
-
-            return Task.FromResult(result as IConnectorConnection);
+            return await AuthenticationDetailsHelper.GetAuthenticationDetails(executionContext, providerDefinitionId);
         }
 
         public override Task<ConnectorLatestEntityPersistInfo> GetLatestEntityPersistInfo(ExecutionContext executionContext, Guid providerDefinitionId, string containerName,
