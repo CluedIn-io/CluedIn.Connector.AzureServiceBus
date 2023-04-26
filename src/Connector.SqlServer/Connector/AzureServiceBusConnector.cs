@@ -8,7 +8,6 @@ using Azure.Messaging.ServiceBus.Administration;
 using CluedIn.Core;
 using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
-using CluedIn.Core.DataStore;
 using CluedIn.Core.Processing;
 using CluedIn.Core.Streams.Models;
 using Microsoft.Extensions.Logging;
@@ -19,21 +18,19 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 {
     public class AzureServiceBusConnector : ConnectorBaseV2
     {
-        private readonly IConfigurationRepository _configurationRepository;
         private readonly ILogger<AzureServiceBusConnector> _logger;
         private readonly IApplicationCache _cache;
 
-        public AzureServiceBusConnector(IConfigurationRepository repo, ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(AzureServiceBusConstants.ProviderId)
+        public AzureServiceBusConnector(ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(AzureServiceBusConstants.ProviderId)
         {
-            _configurationRepository = repo;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cache = cache;
         }
 
-        public override async Task CreateContainer(ExecutionContext executionContext, Guid providerDefinitionId, CreateContainerModelV2 model)
+        public override async Task CreateContainer(ExecutionContext executionContext, Guid connectorProviderDefinitionId, IReadOnlyCreateContainerModelV2 model)
         {
-            var config = await GetAuthenticationDetails(executionContext, providerDefinitionId);
-            var data = new AzureServiceBusConnectorJobData(config.Authentication);
+            var config = await GetAuthenticationDetails(executionContext, connectorProviderDefinitionId);
+            var data = new AzureServiceBusConnectorJobData(config.Authentication.ToDictionary(x => x.Key, x => x.Value));
 
             var properties = ServiceBusConnectionStringProperties.Parse(data.ConnectionString);
 
@@ -69,22 +66,22 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             );
         }
 
-        public override async Task EmptyContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        public override async Task EmptyContainer(ExecutionContext executionContext, IReadOnlyStreamModel streamModel)
         {
             await Task.FromResult(0);
         }
 
-        public override async Task ArchiveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        public override async Task ArchiveContainer(ExecutionContext executionContext, IReadOnlyStreamModel streamModel)
         {
             await Task.FromResult(0);
         }
 
-        public override async Task RenameContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id, string newName)
+        public override async Task RenameContainer(ExecutionContext executionContext, IReadOnlyStreamModel streamModel, string oldContainerName)
         {
             await Task.FromResult(0);
         }
 
-        public override async Task RemoveContainer(ExecutionContext executionContext, Guid providerDefinitionId, string id)
+        public override async Task RemoveContainer(ExecutionContext executionContext, IReadOnlyStreamModel streamModel)
         {
             await Task.FromResult(0);
         }
@@ -116,9 +113,9 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             return await Task.FromResult(new List<IConnectorContainer>());
         }
 
-        public override async Task<ConnectionVerificationResult> VerifyConnection(ExecutionContext executionContext, IDictionary<string, object> config)
+        public override async Task<ConnectionVerificationResult> VerifyConnection(ExecutionContext executionContext, IReadOnlyDictionary<string, object> config)
         {
-            var data = new AzureServiceBusConnectorJobData(config);
+            var data = new AzureServiceBusConnectorJobData(config.ToDictionary(x => x.Key, x => x.Value));
 
             ServiceBusConnectionStringProperties properties;
 
@@ -171,8 +168,11 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             return new ConnectionVerificationResult(true);
         }
 
-        public override async Task<SaveResult> StoreData(ExecutionContext executionContext, Guid providerDefinitionId, string containerName, ConnectorEntityData connectorEntityData)
+        public override async Task<SaveResult> StoreData(ExecutionContext executionContext, IReadOnlyStreamModel streamModel, IReadOnlyConnectorEntityData connectorEntityData)
         {
+            var providerDefinitionId = streamModel.ConnectorProviderDefinitionId!.Value;
+            var containerName = streamModel.ContainerName;
+
             // matching output format of previous version of the connector
             var data = connectorEntityData.Properties.ToDictionary(x => x.Name, x => x.Value);
             data.Add("Id", connectorEntityData.EntityId);
@@ -207,7 +207,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             data.Add("ChangeType", connectorEntityData.ChangeType.ToString());
 
             var details = await GetAuthenticationDetails(executionContext, providerDefinitionId);
-            var config = new AzureServiceBusConnectorJobData(details.Authentication);
+            var config = new AzureServiceBusConnectorJobData(details.Authentication.ToDictionary(x => x.Key, x => x.Value));
 
             await using var client = new ServiceBusClient(config.ConnectionString);
 
@@ -218,23 +218,22 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                 new ServiceBusMessage(JsonUtility.Serialize(data,
                     new JsonSerializer() { Formatting = Formatting.Indented }));
 
-            await ActionExtensions.ExecuteWithRetryAsync(() => sender.SendMessageAsync(message));
+            await sender.SendMessageAsync(message);
 
             return SaveResult.Success;
         }
 
-        public virtual async Task<IConnectorConnection> GetAuthenticationDetails(ExecutionContext executionContext, Guid providerDefinitionId)
+        public virtual async Task<IConnectorConnectionV2> GetAuthenticationDetails(ExecutionContext executionContext, Guid providerDefinitionId)
         {
             return await AuthenticationDetailsHelper.GetAuthenticationDetails(executionContext, providerDefinitionId);
         }
 
-        public override Task<ConnectorLatestEntityPersistInfo> GetLatestEntityPersistInfo(ExecutionContext executionContext, Guid providerDefinitionId, string containerName,
-            Guid entityId)
+        public override Task<ConnectorLatestEntityPersistInfo> GetLatestEntityPersistInfo(ExecutionContext executionContext, IReadOnlyStreamModel streamModel, Guid entityId)
         {
             throw new NotSupportedException();
         }
 
-        public override Task<IAsyncEnumerable<ConnectorLatestEntityPersistInfo>> GetLatestEntityPersistInfos(ExecutionContext executionContext, Guid providerDefinitionId, string containerName)
+        public override Task<IAsyncEnumerable<ConnectorLatestEntityPersistInfo>> GetLatestEntityPersistInfos(ExecutionContext executionContext, IReadOnlyStreamModel streamModel)
         {
             throw new NotSupportedException();
         }
@@ -244,7 +243,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             return new[] { StreamMode.Sync };
         }
 
-        public override Task VerifyExistingContainer(ExecutionContext executionContext, StreamModel stream)
+        public override Task VerifyExistingContainer(ExecutionContext executionContext, IReadOnlyStreamModel streamModel)
         {
             return Task.FromResult(0);
         }

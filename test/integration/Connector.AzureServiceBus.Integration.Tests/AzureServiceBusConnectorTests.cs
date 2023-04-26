@@ -55,7 +55,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
 
             var model = new CreateContainerModelV2("TEST_" + Guid.NewGuid(), null, ExistingContainerActionEnum.Overwrite, false, false, StreamMode.Sync);
 
-            var connectionMock = new Mock<IConnectorConnection>();
+            var connectionMock = new Mock<IConnectorConnectionV2>();
             connectionMock.Setup(x => x.Authentication).Returns(new Dictionary<string, object>
             {
                 { AzureServiceBusConstants.KeyName.ConnectionString, RootConnectionString }
@@ -186,7 +186,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
                     .Select(p => container.Resolve(p.ParameterType)).ToArray());
 
-            var connectionMock = new Mock<IConnectorConnection>();
+            var connectionMock = new Mock<IConnectorConnectionV2>();
             connectionMock.Setup(x => x.Authentication).Returns(new Dictionary<string, object>
             {
                 { AzureServiceBusConstants.KeyName.ConnectionString, TestQueueConnectionString }
@@ -216,8 +216,12 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                 new IEntityCode[] { EntityCode.FromKey("/Person#Acceptance:7c5591cf-861a-4642-861d-3b02485854a0") },
                 null, null);
 
+            var streamModel = new Mock<IReadOnlyStreamModel>();
+            streamModel.Setup(x => x.ConnectorProviderDefinitionId).Returns(Guid.Empty);
+            streamModel.Setup(x => x.ContainerName).Returns("test_container");
+
             // act
-            await connector.StoreData(executionContext, Guid.Empty, "test_container", data);
+            await connector.StoreData(executionContext, streamModel.Object, data);
 
             // assert
             var client = new ServiceBusClient(RootConnectionString);
@@ -278,7 +282,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
                     .Select(p => container.Resolve(p.ParameterType)).ToArray());
 
-            var connectionMock = new Mock<IConnectorConnection>();
+            var connectionMock = new Mock<IConnectorConnectionV2>();
             connectionMock.Setup(x => x.Authentication).Returns(new Dictionary<string, object>
             {
                 { AzureServiceBusConstants.KeyName.ConnectionString, TestQueueConnectionString }
@@ -321,8 +325,12 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                         "/EntityB")
                 });
 
+            var streamModel = new Mock<IReadOnlyStreamModel>();
+            streamModel.Setup(x => x.ConnectorProviderDefinitionId).Returns(Guid.Empty);
+            streamModel.Setup(x => x.ContainerName).Returns("test_container");
+
             // act
-            await connector.StoreData(executionContext, Guid.Empty, "test_container", data);
+            await connector.StoreData(executionContext, streamModel.Object, data);
 
             // assert
             var client = new ServiceBusClient(RootConnectionString);
