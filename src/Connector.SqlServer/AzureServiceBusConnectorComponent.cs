@@ -43,6 +43,8 @@ namespace CluedIn.Connector.AzureServiceBus
             Container.Register(Types.FromAssembly(asm).BasedOn<IProvider>().WithServiceFromInterface().If(t => !t.IsAbstract).LifestyleSingleton());
             Container.Register(Types.FromAssembly(asm).BasedOn<IEntityActionBuilder>().WithServiceFromInterface().If(t => !t.IsAbstract).LifestyleSingleton());
 
+            Container.Register(Component.For<IAzureServiceBusClient>().ImplementedBy<AzureServiceBusClient>().OnlyNewServices());
+
             this.Log.LogInformation("Azure Service Bus Registered");
             State = ServiceState.Started;
         }
