@@ -103,7 +103,7 @@ namespace CluedIn.Connector.AzureServiceBus
                                         {
                                             Key = x.SourceDataType, Type = x.SourceObjectType
                                         }).ToList(),
-                                    ExistingContainerAction = ExistingContainerActionEnum.Overwrite,
+                                    ExistingContainerAction = ExistingContainerActionEnum.Archive,
                                     ExportIncomingEdges = stream.ExportIncomingEdges,
                                     ExportOutgoingEdges = stream.ExportOutgoingEdges,
                                     OldContainerName = stream.ContainerName,
