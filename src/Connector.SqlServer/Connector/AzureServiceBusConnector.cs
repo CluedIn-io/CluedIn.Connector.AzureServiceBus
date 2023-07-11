@@ -240,7 +240,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override IReadOnlyCollection<StreamMode> GetSupportedModes()
         {
-            return new[] { StreamMode.Sync };
+            return new[] { StreamMode.EventStream };
         }
 
         public override Task VerifyExistingContainer(ExecutionContext executionContext, IReadOnlyStreamModel streamModel)
