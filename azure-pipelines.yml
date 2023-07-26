@@ -70,5 +70,5 @@ steps:
     parameters:
       githubReleaseInMaster: true
       publicReleaseForMaster: true
-      executeIngegrationTests: ${{ parameters.runIngegrationTests }}
+      executeIntegrationTests: ${{ parameters.runIngegrationTests }}
       publishCodeCoverage: true
