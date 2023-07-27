@@ -25,7 +25,7 @@ resources:
       type: github
       name: CluedIn-io/AzurePipelines.Templates
       endpoint: 'CluedIn-io'
-      ref: refs/heads/feat/nuget-addition-repo-info
+      ref: refs/heads/feat/version-short-sha
 
 pool:
   vmImage: 'windows-latest'
