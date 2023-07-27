@@ -25,7 +25,7 @@ resources:
       type: github
       name: CluedIn-io/AzurePipelines.Templates
       endpoint: 'CluedIn-io'
-      ref: refs/heads/refactor
+      ref: refs/heads/feature/retain-releases
 
 pool:
   vmImage: 'windows-latest'
