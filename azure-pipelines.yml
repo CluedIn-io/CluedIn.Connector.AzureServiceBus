@@ -41,19 +41,6 @@ variables:
     value: Release
 
 steps:
-  - task: UseDotNet@2
-    displayName: Install .NET SDK 3.1
-    inputs:
-      version: 3.1.x
-      
-  - task: UseDotNet@2
-    displayName: Install .NET SDK 7.0
-    inputs:
-      # Pin version to prevent issue with output on solution build:
-      # https://github.com/dotnet/sdk/issues/30625
-      # We will have to update eventually, it's just by that time workaround might be available.
-      version: 7.0.103
-
    # Configure NuGet
   - task: NuGetAuthenticate@0
     displayName: 'Authenticate with nuget'
