@@ -21,15 +21,21 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
     {
         private readonly ILogger<AzureServiceBusConnector> _logger;
         private readonly IApplicationCache _cache;
+        private readonly IServiceBusSenderFactory _serviceBusSenderFactory;
 
         private static readonly List<MessageBatch> _batches = new List<MessageBatch>();
         private readonly SemaphoreSlim _batchLocker = new SemaphoreSlim(1, 1);
-        private readonly Dictionary<SenderCacheKey, ServiceBusSender> _senderCache = new Dictionary<SenderCacheKey, ServiceBusSender>();
+        private readonly Dictionary<SenderCacheKey, IServiceBusSenderWrapper> _senderCache = new Dictionary<SenderCacheKey, IServiceBusSenderWrapper>();
 
-        public AzureServiceBusConnector(ILogger<AzureServiceBusConnector> logger, IApplicationCache cache) : base(AzureServiceBusConstants.ProviderId)
+        public AzureServiceBusConnector(
+            ILogger<AzureServiceBusConnector> logger,
+            IApplicationCache cache,
+            IServiceBusSenderFactory serviceBusSenderFactory
+            ) : base(AzureServiceBusConstants.ProviderId)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cache = cache;
+            _serviceBusSenderFactory = serviceBusSenderFactory;
         }
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid connectorProviderDefinitionId, IReadOnlyCreateContainerModelV2 model)
@@ -219,33 +225,30 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                     new JsonSerializer() { Formatting = Formatting.Indented }));
 
             MessageBatch messageBatch;
-            var senderCacheKey = new SenderCacheKey(config, containerName);
 
             await _batchLocker.WaitAsync();
+
+            var senderCacheKey = new SenderCacheKey(config, containerName);
+            IServiceBusSenderWrapper sender;
+            lock (this)
+            {
+                if (!_senderCache.TryGetValue(senderCacheKey, out sender))
+                {
+                    sender = _serviceBusSenderFactory.CreateSender(config, containerName);
+
+                    _senderCache.Add(senderCacheKey, sender);
+
+                    _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Added sender ({sender.GetHashCode()}) to the cache");
+                }
+            }
+
             try
             {
-                messageBatch = _batches.FirstOrDefault(b => b.TryAddMessage(message));
+                messageBatch = _batches.FirstOrDefault(b => b.Sender == sender && b.TryAddMessage(message));
 
                 if (messageBatch == null)
                 {
                     _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Unable to add to any of the existing {_batches.Count} batches");
-
-                    ServiceBusSender sender;
-                    lock (this)
-                    {
-                        if (!_senderCache.TryGetValue(senderCacheKey, out sender))
-                        {
-                            var client = new ServiceBusClient(config.ConnectionString);
-
-                            var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
-
-                            sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
-
-                            _senderCache.Add(senderCacheKey, sender);
-
-                            _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Added sender ({sender.GetHashCode()}) to the cache");
-                        }
-                    }
 
                     messageBatch = await MessageBatch.CreateAsync(sender, _logger);
 

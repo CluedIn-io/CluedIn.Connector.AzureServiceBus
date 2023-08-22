@@ -9,23 +9,23 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
     public class MessageBatch
     {
         public Guid Id { get; }
-        private readonly ServiceBusSender _sender;
-        private readonly ServiceBusMessageBatch _serviceBusMessageBatch;
+        public IServiceBusSenderWrapper Sender { get; }
+        private readonly IServiceBusMessageBatchWrapper _serviceBusMessageBatch;
         private readonly ILogger _logger;
         private DateTime _lastMessageAddedAt;
         public Task FlushingTask { get; }
         private bool _available = true;
 
-        private MessageBatch(ServiceBusSender sender, ServiceBusMessageBatch serviceBusMessageBatch, ILogger logger)
+        private MessageBatch(IServiceBusSenderWrapper sender, IServiceBusMessageBatchWrapper serviceBusMessageBatch, ILogger logger)
         {
-            _sender = sender;
+            Sender = sender;
             _serviceBusMessageBatch = serviceBusMessageBatch;
             _logger = logger;
             Id = Guid.NewGuid();
             FlushingTask = FlushAsync();
         }
 
-        public static async Task<MessageBatch> CreateAsync(ServiceBusSender sender, ILogger logger)
+        public static async Task<MessageBatch> CreateAsync(IServiceBusSenderWrapper sender, ILogger logger)
         {
             var b = await sender.CreateMessageBatchAsync();
 
@@ -48,7 +48,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                     return true;
                 }
 
-                // TODO signal FlushAsync so that we don't have to wait for the next poll interval
+                // TODO signal FlushAsync so that we don't have to wait for the next poll interval? just because this message didn't fit doesn't mean others wont
 
                 return false;
             }
@@ -58,11 +58,11 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         {
             while (true)
             {
-                await Task.Delay(100);
+                await Task.Delay(10);
 
                 lock (this)
                 {
-                    if (DateTime.Now.Subtract(_lastMessageAddedAt).TotalMilliseconds > 100)
+                    if (DateTime.Now.Subtract(_lastMessageAddedAt).TotalMilliseconds > 10)
                     {
                         _available = false;
                     }
@@ -71,7 +71,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                 if (!_available)
                 {
                     _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Sending {_serviceBusMessageBatch.Count} messages from batch ({Id})");
-                    await _sender.SendMessagesAsync(_serviceBusMessageBatch);
+                    await Sender.SendMessagesAsync(_serviceBusMessageBatch);
                     _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Sent {_serviceBusMessageBatch.Count} messages from batch ({Id})");
                     return;
                 }
