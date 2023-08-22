@@ -48,7 +48,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                     return true;
                 }
 
-                // TODO signal FlushAsync so that we don't have to wait for the next poll interval? just because this message didn't fit doesn't mean others wont
+                // TODO do we signal FlushAsync so that we don't have to wait for the next poll interval? just because this message didn't fit doesn't mean others wont
 
                 return false;
             }
