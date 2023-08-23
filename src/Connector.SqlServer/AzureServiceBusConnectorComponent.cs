@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -125,7 +126,7 @@ namespace CluedIn.Connector.AzureServiceBus
                                         OldContainerName = stream.ContainerName,
                                     };
 
-                                    Log.LogInformation($"Setting {nameof(StreamMode.EventStream)} for stream '{stream.Name}' ({stream.Id})");
+                                    Log.LogInformation($"[{AzureServiceBusConstants.ConnectorName}] Setting {nameof(StreamMode.EventStream)} for stream '{stream.Name}' ({stream.Id})");
 
                                     await streamRepository.SetupConnector(stream.Id, model, executionContext);
                                 }
@@ -150,7 +151,17 @@ namespace CluedIn.Connector.AzureServiceBus
             });
             #endregion
 
-            this.Log.LogInformation("Azure Service Bus Registered");
+            try
+            {
+                var version = FileVersionInfo.GetVersionInfo(GetType().Assembly.Location).ProductVersion;
+                Log.LogInformation($"[{AzureServiceBusConstants.ConnectorName}] ProductVersion: {version}");
+            }
+            catch (Exception ex)
+            {
+                Log.LogError(ex, $"[{AzureServiceBusConstants.ConnectorName}] Error determining component version");
+            }
+
+            this.Log.LogInformation($"[{AzureServiceBusConstants.ConnectorName}] Azure Service Bus Registered");
             State = ServiceState.Started;
         }
 
