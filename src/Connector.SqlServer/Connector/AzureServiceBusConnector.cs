@@ -272,7 +272,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
             try
             {
-                await messageBatch.FlushingTask;    // TODO verify that this throws and exception for all awaiting tasks
+                await messageBatch.FlushingTask;
             }
             catch (Exception ex)
             {
