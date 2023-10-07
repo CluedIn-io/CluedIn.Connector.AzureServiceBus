@@ -8,7 +8,7 @@ namespace CluedIn.Connector.AzureServiceBus
     {
         public void Install(IWindsorContainer container, IConfigurationStore store)
         {
-            //container.Register(Component.For<ISqlClient>().ImplementedBy<SqlClient>().OnlyNewServices());
+            container.Register(Component.For<IServiceBusSenderFactory>().ImplementedBy<ServiceBusSenderFactory>().LifestyleSingleton());
         }
     }
 }

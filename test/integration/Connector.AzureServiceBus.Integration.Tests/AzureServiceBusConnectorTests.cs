@@ -44,7 +44,9 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             // arrange
             var container = new WindsorContainer();
             container.Register(Component.For<IWindsorContainer>().Instance(container));
+            container.Register(Component.For<ITestOutputHelper>().Instance(_testOutputHelper));
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
+            container.Register(Component.For<IServiceBusSenderFactory>().ImplementedBy<ServiceBusSenderFactory>());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
             var executionContext = container.Resolve<ExecutionContext>();
@@ -100,6 +102,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             // arrange
             var container = new WindsorContainer();
             container.Register(Component.For<IWindsorContainer>().Instance(container));
+            container.Register(Component.For<ITestOutputHelper>().Instance(_testOutputHelper));
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
@@ -127,7 +130,9 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             // arrange
             var container = new WindsorContainer();
             container.Register(Component.For<IWindsorContainer>().Instance(container));
+            container.Register(Component.For<ITestOutputHelper>().Instance(_testOutputHelper));
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
+            container.Register(Component.For<IServiceBusSenderFactory>().ImplementedBy<ServiceBusSenderFactory>());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
             container.Register(Component.For<AzureServiceBusConnector>());
@@ -152,6 +157,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             // arrange
             var container = new WindsorContainer();
             container.Register(Component.For<IWindsorContainer>().Instance(container));
+            container.Register(Component.For<ITestOutputHelper>().Instance(_testOutputHelper));
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
@@ -177,7 +183,9 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             // arrange
             var container = new WindsorContainer();
             container.Register(Component.For<IWindsorContainer>().Instance(container));
+            container.Register(Component.For<ITestOutputHelper>().Instance(_testOutputHelper));
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
+            container.Register(Component.For<IServiceBusSenderFactory>().ImplementedBy<ServiceBusSenderFactory>().LifestyleSingleton());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
             var executionContext = container.Resolve<ExecutionContext>();
@@ -273,7 +281,9 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             // arrange
             var container = new WindsorContainer();
             container.Register(Component.For<IWindsorContainer>().Instance(container));
+            container.Register(Component.For<ITestOutputHelper>().Instance(_testOutputHelper));
             container.Register(Component.For<IApplicationCache>().ImplementedBy<InMemoryApplicationCache>());
+            container.Register(Component.For<IServiceBusSenderFactory>().ImplementedBy<ServiceBusSenderFactory>());
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
             var executionContext = container.Resolve<ExecutionContext>();
