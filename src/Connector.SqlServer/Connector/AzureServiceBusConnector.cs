@@ -181,6 +181,8 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task<SaveResult> StoreData(ExecutionContext executionContext, IReadOnlyStreamModel streamModel, IReadOnlyConnectorEntityData connectorEntityData)
         {
+            _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] {nameof(StoreData)} {connectorEntityData.EntityId} {connectorEntityData.ChangeType}");
+
             var providerDefinitionId = streamModel.ConnectorProviderDefinitionId!.Value;
             var containerName = streamModel.ContainerName;
 
