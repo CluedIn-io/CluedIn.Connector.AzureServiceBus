@@ -167,7 +167,6 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
 
             // Setup
             Server.Setup(s => s.ApplicationContext).Returns(() => Container.Resolve<ApplicationContext>());
-            Bus.Setup(s => s.IsConnected).Returns(false);
             Bus.Setup(s => s.Advanced.IsConnected).Returns(false);
 
             OrganizationFactory = (ctx, id) => new TestOrganization(ctx.ApplicationContext, id);
