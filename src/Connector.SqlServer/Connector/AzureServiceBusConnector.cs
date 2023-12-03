@@ -181,6 +181,8 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
         public override async Task<SaveResult> StoreData(ExecutionContext executionContext, IReadOnlyStreamModel streamModel, IReadOnlyConnectorEntityData connectorEntityData)
         {
+            _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] {nameof(StoreData)} {connectorEntityData.EntityId} {connectorEntityData.ChangeType}");
+
             var providerDefinitionId = streamModel.ConnectorProviderDefinitionId!.Value;
             var containerName = streamModel.ContainerName;
 
@@ -226,11 +228,9 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
             MessageBatch messageBatch;
 
-            await _batchLocker.WaitAsync();
-
             var senderCacheKey = new SenderCacheKey(config, containerName);
             IServiceBusSenderWrapper sender;
-            lock (this)
+            lock (_senderCache)
             {
                 if (!_senderCache.TryGetValue(senderCacheKey, out sender))
                 {
@@ -240,6 +240,11 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
                     _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Added sender ({sender.GetHashCode()}) to the cache");
                 }
+            }
+
+            if (!await _batchLocker.WaitAsync(3 * 60 * 1000))
+            {
+                throw new TimeoutException("Timeout waiting for batchLocker");
             }
 
             try
