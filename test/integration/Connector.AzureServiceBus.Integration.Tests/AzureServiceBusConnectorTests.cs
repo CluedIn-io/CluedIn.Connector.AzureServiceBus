@@ -55,7 +55,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
                     .Select(p => container.Resolve(p.ParameterType)).ToArray());
 
-            var model = new CreateContainerModelV2("TEST_" + Guid.NewGuid(), null, ExistingContainerActionEnum.Overwrite, false, false, StreamMode.Sync);
+            var model = new CreateContainerModelV2("TEST_" + Guid.NewGuid(), null, ExistingContainerActionEnum.Overwrite, outgoingEdgesAreExported: false, incomingEdgesAreExported: false, outgoingEdgePropertiesAreExported: false, incomingEdgePropertiesAreExported: false, StreamMode.Sync);
 
             var connectionMock = new Mock<IConnectorConnectionV2>();
             connectionMock.Setup(x => x.Authentication).Returns(new Dictionary<string, object>
@@ -109,7 +109,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             container.Register(Component.For<AzureServiceBusConnector>());
 
             var executionContext = container.Resolve<ExecutionContext>();
-            
+
             var connector = container.Resolve<AzureServiceBusConnector>();
 
             // act
@@ -138,7 +138,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             container.Register(Component.For<AzureServiceBusConnector>());
 
             var executionContext = container.Resolve<ExecutionContext>();
- 
+
             var connector = container.Resolve<AzureServiceBusConnector>();
 
             // act
@@ -164,7 +164,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             container.Register(Component.For<AzureServiceBusConnector>());
 
             var executionContext = container.Resolve<ExecutionContext>();
-            
+
             var connector = container.Resolve<AzureServiceBusConnector>();
 
             // act
