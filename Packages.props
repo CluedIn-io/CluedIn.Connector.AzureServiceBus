@@ -1,11 +1,8 @@
 <Project>
   <PropertyGroup Label="Dependency Versions">
-    <_CacheCow>2.7.2</_CacheCow>
-    <_EasyNetQ>3.7.1</_EasyNetQ>
-    <_EntityFramework>3.1.5</_EntityFramework>
-    <_MicrosoftExtensions>3.1.5</_MicrosoftExtensions>
+    <_EntityFramework>6.0.16</_EntityFramework>
     <_AutoFixture>4.11.0</_AutoFixture>
-    <_CluedIn>3.6.0-*</_CluedIn>
+    <_CluedIn>4.0.0</_CluedIn>
   </PropertyGroup>
   <ItemGroup>
     <!--
@@ -36,14 +33,14 @@
 
         MUST SPECIFY IN CSPROJ AS <PackageReference Name="<depName>" />
     -->
-    <PackageReference Update="Castle.Windsor" Version="5.0.1" />
+    <PackageReference Update="Castle.Windsor" Version="5.1.2" />
     <PackageReference Update="CluedIn.Core" Version="$(_CluedIn)" />
     <PackageReference Update="CluedIn.Core.Agent" Version="$(_CluedIn)" />
     <PackageReference Update="CluedIn.Crawling" Version="$(_CluedIn)" />
-    <PackageReference Update="CluedIn.CrawlerIntegrationTesting" Version="$(_CluedIn)" />
+    <PackageReference Update="CluedIn.CrawlerIntegrationTesting" Version="4.0.0" />
     <PackageReference Update="CluedIn.DataStore" Version="$(_CluedIn)" />
     <PackageReference Update="RestSharp" Version="106.10.1" />
-    <PackageReference Update="Dapper" Version="2.0.35" />
+    <PackageReference Update="Dapper" Version="2.0.138" />
     <PackageReference Update="Dapper.SqlBuilder" Version="2.0.35" />
     <PackageReference Update="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
   </ItemGroup>
