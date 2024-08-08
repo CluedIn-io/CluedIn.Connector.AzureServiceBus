@@ -228,77 +228,93 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
             MessageBatch messageBatch;
 
-            var senderCacheKey = new SenderCacheKey(config, containerName);
-            IServiceBusSenderWrapper sender;
-            lock (_senderCache)
-            {
-                if (!_senderCache.TryGetValue(senderCacheKey, out sender))
-                {
-                    sender = _serviceBusSenderFactory.CreateSender(config, containerName);
-
-                    _senderCache.Add(senderCacheKey, sender);
-
-                    _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Added sender ({sender.GetHashCode()}) to the cache");
-                }
-            }
-
-            if (!await _batchLocker.WaitAsync(3 * 60 * 1000))
-            {
-                throw new TimeoutException("Timeout waiting for batchLocker");
-            }
-
             try
             {
-                messageBatch = _batches.FirstOrDefault(b => b.Sender == sender && b.TryAddMessage(message));
 
-                if (messageBatch == null)
+                var senderCacheKey = new SenderCacheKey(config, containerName);
+                IServiceBusSenderWrapper sender;
+                lock (_senderCache)
                 {
-                    _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Unable to add to any of the existing {_batches.Count} batches");
-
-                    messageBatch = await MessageBatch.CreateAsync(sender, _logger);
-
-                    _batches.Add(messageBatch);
-
-                    _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Added new batch ({messageBatch.Id}) to the queue");
-
-                    if (!messageBatch.TryAddMessage(message))
+                    if (!_senderCache.TryGetValue(senderCacheKey, out sender))
                     {
-                        var errorMessage = $"Unable to add message to new messageBatch ({messageBatch.Id})";
-                        _logger.Log(LogLevel.Error, $"[{AzureServiceBusConstants.ConnectorName}] {errorMessage}");
-                        throw new Exception(errorMessage);
+                        sender = _serviceBusSenderFactory.CreateSender(config, containerName);
+
+                        _senderCache.Add(senderCacheKey, sender);
+
+                        _logger.Log(LogLevel.Debug,
+                            $"[{AzureServiceBusConstants.ConnectorName}] Added sender ({sender.GetHashCode()}) to the cache");
                     }
                 }
 
-            }
-            finally
-            {
-                _batchLocker.Release();
-            }
+                if (!await _batchLocker.WaitAsync(3 * 60 * 1000))
+                {
+                    throw new TimeoutException("Timeout waiting for batchLocker");
+                }
 
-            try
-            {
-                await messageBatch.FlushingTask;
+                try
+                {
+                    messageBatch = _batches.FirstOrDefault(b => b.Sender == sender && b.TryAddMessage(message));
+
+                    if (messageBatch == null)
+                    {
+                        _logger.Log(LogLevel.Debug,
+                            $"[{AzureServiceBusConstants.ConnectorName}] Unable to add to any of the existing {_batches.Count} batches");
+
+                        messageBatch = await MessageBatch.CreateAsync(sender, _logger);
+
+                        _batches.Add(messageBatch);
+
+                        _logger.Log(LogLevel.Debug,
+                            $"[{AzureServiceBusConstants.ConnectorName}] Added new batch ({messageBatch.Id}) to the queue");
+
+                        if (!messageBatch.TryAddMessage(message))
+                        {
+                            var errorMessage = $"Unable to add message to new messageBatch ({messageBatch.Id})";
+                            _logger.Log(LogLevel.Error, $"[{AzureServiceBusConstants.ConnectorName}] {errorMessage}");
+                            throw new Exception(errorMessage);
+                        }
+                    }
+
+                }
+                finally
+                {
+                    _batchLocker.Release();
+                }
+
+                try
+                {
+                    await messageBatch.FlushingTask;
+                }
+                catch (Exception ex)
+                {
+                    // remove the sender from the cache to avoid any poison senders
+                    lock (_senderCache)
+                    {
+                        _senderCache.Remove(senderCacheKey);
+
+                        _logger.Log(LogLevel.Debug, ex,
+                            $"[{AzureServiceBusConstants.ConnectorName}] Removed sender from the cache due to an exception");
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    await _batchLocker.WaitAsync();
+                    if (_batches.Remove(messageBatch))
+                    {
+                        _logger.Log(LogLevel.Debug,
+                            $"[{AzureServiceBusConstants.ConnectorName}] Removed batch ({messageBatch.Id}) from queue {_batches.Count} batches remaining");
+                    }
+
+                    _batchLocker.Release();
+                }
             }
             catch (Exception ex)
             {
-                // remove the sender from the cache to avoid any poison senders
-                lock (_senderCache)
-                {
-                    _senderCache.Remove(senderCacheKey);
+                _logger.LogWarning("[AzureServiceBus] {message}", ex.Message);
 
-                    _logger.Log(LogLevel.Debug, ex, $"[{AzureServiceBusConstants.ConnectorName}] Removed sender from the cache due to an exception");
-                }
-
-                throw;
-            }
-            finally
-            {
-                await _batchLocker.WaitAsync();
-                if (_batches.Remove(messageBatch))
-                {
-                    _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Removed batch ({messageBatch.Id}) from queue {_batches.Count} batches remaining");
-                }
-                _batchLocker.Release();
+                return SaveResult.ReQueue;
             }
 
             return SaveResult.Success;
