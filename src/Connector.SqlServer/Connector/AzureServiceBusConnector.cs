@@ -301,7 +301,6 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                     {
                         _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Removed batch ({messageBatch.Id}) from queue {_batches.Count} batches remaining");
                     }
-
                     _batchLocker.Release();
                 }
             }
