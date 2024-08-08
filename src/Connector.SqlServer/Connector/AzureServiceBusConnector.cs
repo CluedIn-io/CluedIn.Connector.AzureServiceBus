@@ -241,8 +241,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
                         _senderCache.Add(senderCacheKey, sender);
 
-                        _logger.Log(LogLevel.Debug,
-                            $"[{AzureServiceBusConstants.ConnectorName}] Added sender ({sender.GetHashCode()}) to the cache");
+                        _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Added sender ({sender.GetHashCode()}) to the cache");
                     }
                 }
 
@@ -257,15 +256,13 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
                     if (messageBatch == null)
                     {
-                        _logger.Log(LogLevel.Debug,
-                            $"[{AzureServiceBusConstants.ConnectorName}] Unable to add to any of the existing {_batches.Count} batches");
+                        _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Unable to add to any of the existing {_batches.Count} batches");
 
                         messageBatch = await MessageBatch.CreateAsync(sender, _logger);
 
                         _batches.Add(messageBatch);
 
-                        _logger.Log(LogLevel.Debug,
-                            $"[{AzureServiceBusConstants.ConnectorName}] Added new batch ({messageBatch.Id}) to the queue");
+                        _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Added new batch ({messageBatch.Id}) to the queue");
 
                         if (!messageBatch.TryAddMessage(message))
                         {
@@ -292,8 +289,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                     {
                         _senderCache.Remove(senderCacheKey);
 
-                        _logger.Log(LogLevel.Debug, ex,
-                            $"[{AzureServiceBusConstants.ConnectorName}] Removed sender from the cache due to an exception");
+                        _logger.Log(LogLevel.Debug, ex, $"[{AzureServiceBusConstants.ConnectorName}] Removed sender from the cache due to an exception");
                     }
 
                     throw;
@@ -303,8 +299,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                     await _batchLocker.WaitAsync();
                     if (_batches.Remove(messageBatch))
                     {
-                        _logger.Log(LogLevel.Debug,
-                            $"[{AzureServiceBusConstants.ConnectorName}] Removed batch ({messageBatch.Id}) from queue {_batches.Count} batches remaining");
+                        _logger.Log(LogLevel.Debug, $"[{AzureServiceBusConstants.ConnectorName}] Removed batch ({messageBatch.Id}) from queue {_batches.Count} batches remaining");
                     }
 
                     _batchLocker.Release();
