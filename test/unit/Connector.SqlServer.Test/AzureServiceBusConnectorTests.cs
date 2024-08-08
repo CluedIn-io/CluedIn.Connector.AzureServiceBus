@@ -13,6 +13,7 @@ using CluedIn.Core.Connectors;
 using CluedIn.Core.Data;
 using CluedIn.Core.Data.Parts;
 using CluedIn.Core.Data.Vocabularies;
+using CluedIn.Core.Processing;
 using CluedIn.Core.Streams.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestPlatform.Utilities;
@@ -161,7 +162,7 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
         }
 
         [Fact]
-        public async void ExceptionOnBatchSendIsThrownForEachStoreDataTask()
+        public async void ExceptionOnBatchSendIsRequeuedForEachStoreDataTask()
         {
             /*
              * arrange
@@ -199,7 +200,7 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
 
             var connector = connectorMock.Object;
 
-            Task createSaveDataTask()
+            Task<SaveResult> createSaveDataTask()
             {
                 var executionContext = container.Resolve<ExecutionContext>();
 
@@ -234,18 +235,18 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
             /*
              * act
              */
-            await Assert.ThrowsAsync<TestException>(() => Task.WhenAll(saveDataTask1, saveDataTask2));
+            await Task.WhenAll(saveDataTask1, saveDataTask2);
 
             /*
              * assert
              */
             // both save tasks should have resulted in exceptions
-            Assert.NotNull(saveDataTask1.Exception);
-            Assert.NotNull(saveDataTask2.Exception);
+            Assert.Null(saveDataTask1.Exception);
+            Assert.Null(saveDataTask2.Exception);
 
             // they should both have been TestException
-            Assert.IsType<TestException>(saveDataTask1.Exception.InnerException);
-            Assert.IsType<TestException>(saveDataTask2.Exception.InnerException);
+            Assert.Equal(saveDataTask1.Result.State, SaveResultState.ReQueue);
+            Assert.Equal(saveDataTask2.Result.State, SaveResultState.ReQueue);
 
             // not really related to the test but SendMessagesAsync should have only been called once
             serviceBusSenderMock.Verify(x =>
