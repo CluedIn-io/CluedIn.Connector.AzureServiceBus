@@ -45,7 +45,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
             var properties = ServiceBusConnectionStringProperties.Parse(data.ConnectionString);
 
-            if ((data.Name ?? properties.EntityPath) != null)
+            if ((string.IsNullOrWhiteSpace(data.Name) ? properties.EntityPath : data.Name) != null)
             {
                 return; // if a queue name has been specified via the connection string or the export target config then do not try to create the queue
             }
@@ -139,7 +139,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                 return new ConnectionVerificationResult(false, "Invalid connection string");
             }
 
-            var queueName = data.Name ?? properties.EntityPath;
+            var queueName = string.IsNullOrWhiteSpace(data.Name) ? properties.EntityPath : data.Name;
 
             if (queueName == null)  // no queueName, lets use the admin client to verify the connection string
             {
@@ -165,7 +165,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                 try
                 {
                     await using var client = new ServiceBusClient(data.ConnectionString);
-                    var sender = client.CreateSender(data.Name ?? properties.EntityPath);
+                    var sender = client.CreateSender(string.IsNullOrWhiteSpace(data.Name) ? properties.EntityPath : data.Name);
 
                     await sender.CreateMessageBatchAsync();
                 }
