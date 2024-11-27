@@ -14,8 +14,7 @@ namespace CluedIn.Connector.AzureServiceBus
             var client = new ServiceBusClient(config.ConnectionString);
 
             var properties = ServiceBusConnectionStringProperties.Parse(config.ConnectionString);
-
-            var sender = client.CreateSender(config.Name ?? properties.EntityPath ?? containerName);
+            var sender = client.CreateSender((string.IsNullOrWhiteSpace(config.Name) ? properties.EntityPath : config.Name) ?? containerName);
 
             return new ServiceBusSenderWrapper(sender);
         }
