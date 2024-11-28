@@ -101,8 +101,16 @@ namespace CluedIn.Connector.AzureServiceBus
             }
 
             var parts = new List<string>();
+            ServiceBusConnectionStringProperties properties = new();
 
-            var properties = ServiceBusConnectionStringProperties.Parse(result.ConnectionString);
+            try
+            {
+                properties = ServiceBusConnectionStringProperties.Parse(result.ConnectionString);        
+            } catch (Exception ex)
+            {
+                throw new ArgumentException("Invalid connection string", ex);
+            }
+
             parts.Add(properties.FullyQualifiedNamespace);
             if (!string.IsNullOrWhiteSpace(properties.SharedAccessKeyName))
             {
