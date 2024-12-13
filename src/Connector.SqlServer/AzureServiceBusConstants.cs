@@ -35,23 +35,35 @@ namespace CluedIn.Connector.AzureServiceBus
         public const string Category = "Connectivity";
         public const string Details = "Supports publishing of data to Azure Service Bus.";
 
-        public static AuthMethods AuthMethods = new AuthMethods
+        public static AuthMethods AuthMethods = new()
         {
-            token = new Control[]
+            Token = new Control[]
             {
-                new Control
-                {
-                    name = KeyName.ConnectionString,
-                    displayName = "Connection String",
-                    type = "password",
-                    isRequired = true
+                new() {
+                    Name = KeyName.ConnectionString,
+                    DisplayName = "Connection String",
+                    Type = "password",
+                    IsRequired = true,
+                    ValidationRules = new List<Dictionary<string, string>>()
+                    {
+                        new() {
+                            { "regex", "\\s" },
+                            { "message", "Spaces are not allowed" }
+                        }
+                    }
                 },
-                new Control
-                {
-                    name = KeyName.Name,
-                    displayName = "Queue Name (default: EntityPath from connection string, else the target name of the stream)",
-                    type = "input",
-                    isRequired = false,
+                new() {
+                    Name = KeyName.Name,
+                    DisplayName = "Queue Name (default: EntityPath from connection string, else the target name of the stream)",
+                    Type = "input",
+                    IsRequired = false,
+                    ValidationRules = new List<Dictionary<string, string>>()
+                    {
+                        new() {
+                            { "regex", "\\s" },
+                            { "message", "Spaces are not allowed" }
+                        }
+                    }
                 },
             }
         };
@@ -61,11 +73,12 @@ namespace CluedIn.Connector.AzureServiceBus
 
         };
 
-        public static readonly ComponentEmailDetails ComponentEmailDetails = new ComponentEmailDetails {
+        public static readonly ComponentEmailDetails ComponentEmailDetails = new()
+        {
             Features = new Dictionary<string, string>
             {
-                                       { "Connectivity",        "Expenses and Invoices against customers" }
-                                   },
+                { "Connectivity", "Expenses and Invoices against customers" }
+            },
             Icon = ProviderIconFactory.CreateConnectorUri(ProviderId),
             ProviderName = ProviderName,
             ProviderId = ProviderId,
