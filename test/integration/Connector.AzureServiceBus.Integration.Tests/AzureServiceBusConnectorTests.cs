@@ -55,7 +55,15 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
                     .Select(p => container.Resolve(p.ParameterType)).ToArray());
 
-            var model = new CreateContainerModelV2("TEST_" + Guid.NewGuid(), null, ExistingContainerActionEnum.Overwrite, outgoingEdgesAreExported: false, incomingEdgesAreExported: false, outgoingEdgePropertiesAreExported: false, incomingEdgePropertiesAreExported: false, StreamMode.Sync);
+            var modelMock = new Mock<IReadOnlyCreateContainerModelV2>();
+            modelMock.Setup(x => x.Name).Returns("TEST_" + Guid.NewGuid());
+            modelMock.Setup(x => x.Properties).Returns((IReadOnlyCollection<ConnectorProperty>)null);
+            modelMock.Setup(x => x.ExistingContainerAction).Returns(ExistingContainerActionEnum.Overwrite);
+            modelMock.Setup(x => x.OutgoingEdgesAreExported).Returns(false);
+            modelMock.Setup(x => x.IncomingEdgesAreExported).Returns(false);
+            modelMock.Setup(x => x.OutgoingEdgePropertiesAreExported).Returns(false);
+            modelMock.Setup(x => x.IncomingEdgePropertiesAreExported).Returns(false);
+            modelMock.Setup(x => x.StreamMode).Returns(StreamMode.Sync);
 
             var connectionMock = new Mock<IConnectorConnectionV2>();
             connectionMock.Setup(x => x.Authentication).Returns(new Dictionary<string, object>
@@ -72,14 +80,14 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             try
             {
                 // act
-                await connector.CreateContainer(executionContext, Guid.Empty, model);
+                await connector.CreateContainer(executionContext, Guid.Empty, modelMock.Object);
 
                 // assert
                 var client =
                     new Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient(RootConnectionString);
-                var q = await client.GetQueueAsync(model.Name);
+                var q = await client.GetQueueAsync(modelMock.Object.Name);
                 Assert.NotNull(q);
-                Assert.Equal(model.Name, q.Value.Name);
+                Assert.Equal(modelMock.Object.Name, q.Value.Name);
             }
             finally
             {
@@ -87,7 +95,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                 try
                 {
                     var client = new Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient(RootConnectionString);
-                    await client.DeleteQueueAsync(model.Name);
+                    await client.DeleteQueueAsync(modelMock.Object.Name);
                 }
                 catch (Exception ex)
                 {
