@@ -2,7 +2,7 @@
   <PropertyGroup Label="Dependency Versions">
     <_EntityFramework>6.0.16</_EntityFramework>
     <_AutoFixture>4.11.0</_AutoFixture>
-    <_CluedIn>4.4.0-alpha.0.pr6510.424</_CluedIn>
+    <_CluedIn>4.5.0-*</_CluedIn>
   </PropertyGroup>
   <ItemGroup>
     <!--
