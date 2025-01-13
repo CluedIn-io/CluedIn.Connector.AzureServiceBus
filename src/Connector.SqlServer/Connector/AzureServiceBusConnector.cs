@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
+using CluedIn.Connector.AzureServiceBus.Services;
 using CluedIn.Core;
 using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
@@ -22,6 +23,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         private readonly ILogger<AzureServiceBusConnector> _logger;
         private readonly IApplicationCache _cache;
         private readonly IServiceBusSenderFactory _serviceBusSenderFactory;
+        private readonly IClock _clock;
 
         private static readonly List<MessageBatch> _batches = new List<MessageBatch>();
         private readonly SemaphoreSlim _batchLocker = new SemaphoreSlim(1, 1);
@@ -30,12 +32,14 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         public AzureServiceBusConnector(
             ILogger<AzureServiceBusConnector> logger,
             IApplicationCache cache,
-            IServiceBusSenderFactory serviceBusSenderFactory
+            IServiceBusSenderFactory serviceBusSenderFactory,
+            IClock clock
             ) : base(AzureServiceBusConstants.ProviderId)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cache = cache;
             _serviceBusSenderFactory = serviceBusSenderFactory;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid connectorProviderDefinitionId, IReadOnlyCreateContainerModelV2 model)
@@ -190,11 +194,8 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             var data = connectorEntityData.Properties.ToDictionary(x => x.Name, x => x.Value);
             data.Add("Id", connectorEntityData.EntityId);
 
-            var timestamp = DateTimeOffset.UtcNow;
-            var epochTime = timestamp.ToUnixTimeSeconds();
-
-            data.Add("TimeStamp", timestamp);
-            data.Add("Epoch", epochTime);
+            data.Add("TimeStamp", _clock.Now);
+            data.Add("Epoch", _clock.Now.ToUnixTimeSeconds());
 
             if (connectorEntityData.PersistInfo != null)
             {
