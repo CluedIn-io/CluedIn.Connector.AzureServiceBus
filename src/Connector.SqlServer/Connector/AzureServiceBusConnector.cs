@@ -189,7 +189,13 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             // matching output format of previous version of the connector
             var data = connectorEntityData.Properties.ToDictionary(x => x.Name, x => x.Value);
             data.Add("Id", connectorEntityData.EntityId);
-            
+
+            var timestamp = DateTimeOffset.UtcNow;
+            var epochTime = timestamp.ToUnixTimeSeconds();
+
+            data.Add("TimeStamp", timestamp);
+            data.Add("Epoch", epochTime);
+
             if (connectorEntityData.PersistInfo != null)
             {
                 data.Add("PersistHash", connectorEntityData.PersistInfo.PersistHash);
