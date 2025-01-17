@@ -8,6 +8,7 @@ using Castle.MicroKernel.Registration;
 using Castle.MicroKernel.Resolvers;
 using Castle.Windsor;
 using CluedIn.Connector.AzureServiceBus.Connector;
+using CluedIn.Connector.AzureServiceBus.Services;
 using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
 using CluedIn.Core.Data;
@@ -198,6 +199,10 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
 
             var executionContext = container.Resolve<ExecutionContext>();
 
+            var mockClock = new Mock<IClock>();
+            mockClock.Setup(x => x.Now).Returns(new DateTimeOffset(2025, 1, 13, 5, 47, 53, TimeSpan.FromHours(10)));
+            container.Register(Component.For<IClock>().Instance(mockClock.Object));
+
             var connectorMock = new Mock<AzureServiceBusConnector>(MockBehavior.Default,
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
                     .Select(p => container.Resolve(p.ParameterType)).ToArray());
@@ -273,6 +278,8 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
   ""user.lastName"": ""Picard"",
   ""Name"": ""Jean Luc Picard"",
   ""Id"": ""69e26b81-bcbf-54f7-af97-be056f73bf9a"",
+  ""TimeStamp"": ""2025-01-13T05:47:53+10:00"",
+  ""Epoch"": 1736711273,
   ""PersistHash"": ""1lzghdhhgqlnucj078/77q=="",
   ""OriginEntityCode"": ""/Person#Acceptance:7c5591cf-861a-4642-861d-3b02485854a0"",
   ""EntityType"": ""/Person"",
@@ -295,6 +302,10 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
             var executionContext = container.Resolve<ExecutionContext>();
+
+            var mockClock = new Mock<IClock>();
+            mockClock.Setup(x => x.Now).Returns(new DateTimeOffset(2025, 1, 13, 5, 47, 53, TimeSpan.FromHours(10)));
+            container.Register(Component.For<IClock>().Instance(mockClock.Object));
 
             var connectorMock = new Mock<AzureServiceBusConnector>(MockBehavior.Default,
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
@@ -384,6 +395,8 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
   ""user.lastName"": ""Picard"",
   ""Name"": ""Jean Luc Picard"",
   ""Id"": ""69e26b81-bcbf-54f7-af97-be056f73bf9a"",
+  ""TimeStamp"": ""2025-01-13T05:47:53+10:00"",
+  ""Epoch"": 1736711273,
   ""PersistHash"": ""1lzghdhhgqlnucj078/77q=="",
   ""OriginEntityCode"": ""/Person#Acceptance:7c5591cf-861a-4642-861d-3b02485854a0"",
   ""EntityType"": ""/Person"",
