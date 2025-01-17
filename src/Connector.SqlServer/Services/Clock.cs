@@ -2,12 +2,12 @@
 
 namespace CluedIn.Connector.AzureServiceBus.Services
 {
-    public interface IClock
+    public interface IClockService
     {
         DateTimeOffset Now { get; }
     }
 
-    internal class Clock : IClock
+    internal class ClockService : IClockService
     {
         public DateTimeOffset Now => DateTimeOffset.Now;
     }
