@@ -199,9 +199,9 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
 
             var executionContext = container.Resolve<ExecutionContext>();
 
-            var mockClock = new Mock<IClock>();
+            var mockClock = new Mock<IClockService>();
             mockClock.Setup(x => x.Now).Returns(new DateTimeOffset(2025, 1, 13, 5, 47, 53, TimeSpan.FromHours(10)));
-            container.Register(Component.For<IClock>().Instance(mockClock.Object));
+            container.Register(Component.For<IClockService>().Instance(mockClock.Object));
 
             var connectorMock = new Mock<AzureServiceBusConnector>(MockBehavior.Default,
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
@@ -303,9 +303,9 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
 
             var executionContext = container.Resolve<ExecutionContext>();
 
-            var mockClock = new Mock<IClock>();
+            var mockClock = new Mock<IClockService>();
             mockClock.Setup(x => x.Now).Returns(new DateTimeOffset(2025, 1, 13, 5, 47, 53, TimeSpan.FromHours(10)));
-            container.Register(Component.For<IClock>().Instance(mockClock.Object));
+            container.Register(Component.For<IClockService>().Instance(mockClock.Object));
 
             var connectorMock = new Mock<AzureServiceBusConnector>(MockBehavior.Default,
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()

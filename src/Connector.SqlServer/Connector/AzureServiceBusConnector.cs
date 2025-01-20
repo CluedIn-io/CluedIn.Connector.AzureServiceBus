@@ -23,7 +23,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         private readonly ILogger<AzureServiceBusConnector> _logger;
         private readonly IApplicationCache _cache;
         private readonly IServiceBusSenderFactory _serviceBusSenderFactory;
-        private readonly IClock _clock;
+        private readonly IClockService _clockService;
 
         private static readonly List<MessageBatch> _batches = new List<MessageBatch>();
         private readonly SemaphoreSlim _batchLocker = new SemaphoreSlim(1, 1);
@@ -33,13 +33,13 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             ILogger<AzureServiceBusConnector> logger,
             IApplicationCache cache,
             IServiceBusSenderFactory serviceBusSenderFactory,
-            IClock clock
+            IClockService clockService
             ) : base(AzureServiceBusConstants.ProviderId)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cache = cache;
             _serviceBusSenderFactory = serviceBusSenderFactory;
-            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            _clockService = clockService ?? throw new ArgumentNullException(nameof(clockService));
         }
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid connectorProviderDefinitionId, IReadOnlyCreateContainerModelV2 model)
@@ -194,8 +194,8 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             var data = connectorEntityData.Properties.ToDictionary(x => x.Name, x => x.Value);
             data.Add("Id", connectorEntityData.EntityId);
 
-            data.Add("TimeStamp", _clock.Now);
-            data.Add("Epoch", _clock.Now.ToUnixTimeSeconds());
+            data.Add("TimeStamp", _clockService.Now);
+            data.Add("Epoch", _clockService.Now.ToUnixTimeSeconds());
 
             if (connectorEntityData.PersistInfo != null)
             {
