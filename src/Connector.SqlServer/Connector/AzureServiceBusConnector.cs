@@ -160,7 +160,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
                     if (!ex.Message.Contains("claims required")) // token's in the connection string must be valid if we get a claims required message
                     {
-                        return new ConnectionVerificationResult(false);
+                        return new ConnectionVerificationResult(false, ex.Message);
                     }
                 }
             }
@@ -176,7 +176,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                 catch (Exception ex)
                 {
                     _logger.LogInformation(ex, $"{nameof(VerifyConnection)} failed for {nameof(AzureServiceBusConnector)}");
-                    return new ConnectionVerificationResult(false);
+                    return new ConnectionVerificationResult(false, ex.Message);
                 }
             }
 
