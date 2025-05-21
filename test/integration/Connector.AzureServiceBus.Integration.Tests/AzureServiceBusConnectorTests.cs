@@ -8,6 +8,7 @@ using Castle.MicroKernel.Registration;
 using Castle.MicroKernel.Resolvers;
 using Castle.Windsor;
 using CluedIn.Connector.AzureServiceBus.Connector;
+using CluedIn.Connector.AzureServiceBus.Services;
 using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
 using CluedIn.Core.Data;
@@ -55,7 +56,15 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
                     .Select(p => container.Resolve(p.ParameterType)).ToArray());
 
-            var model = new CreateContainerModelV2("TEST_" + Guid.NewGuid(), null, ExistingContainerActionEnum.Overwrite, outgoingEdgesAreExported: false, incomingEdgesAreExported: false, outgoingEdgePropertiesAreExported: false, incomingEdgePropertiesAreExported: false, StreamMode.Sync);
+            var modelMock = new Mock<IReadOnlyCreateContainerModelV2>();
+            modelMock.Setup(x => x.Name).Returns("TEST_" + Guid.NewGuid());
+            modelMock.Setup(x => x.Properties).Returns((IReadOnlyCollection<ConnectorProperty>)null);
+            modelMock.Setup(x => x.ExistingContainerAction).Returns(ExistingContainerActionEnum.Overwrite);
+            modelMock.Setup(x => x.OutgoingEdgesAreExported).Returns(false);
+            modelMock.Setup(x => x.IncomingEdgesAreExported).Returns(false);
+            modelMock.Setup(x => x.OutgoingEdgePropertiesAreExported).Returns(false);
+            modelMock.Setup(x => x.IncomingEdgePropertiesAreExported).Returns(false);
+            modelMock.Setup(x => x.StreamMode).Returns(StreamMode.Sync);
 
             var connectionMock = new Mock<IConnectorConnectionV2>();
             connectionMock.Setup(x => x.Authentication).Returns(new Dictionary<string, object>
@@ -72,14 +81,14 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             try
             {
                 // act
-                await connector.CreateContainer(executionContext, Guid.Empty, model);
+                await connector.CreateContainer(executionContext, Guid.Empty, modelMock.Object);
 
                 // assert
                 var client =
                     new Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient(RootConnectionString);
-                var q = await client.GetQueueAsync(model.Name);
+                var q = await client.GetQueueAsync(modelMock.Object.Name);
                 Assert.NotNull(q);
-                Assert.Equal(model.Name, q.Value.Name);
+                Assert.Equal(modelMock.Object.Name, q.Value.Name);
             }
             finally
             {
@@ -87,7 +96,7 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
                 try
                 {
                     var client = new Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient(RootConnectionString);
-                    await client.DeleteQueueAsync(model.Name);
+                    await client.DeleteQueueAsync(modelMock.Object.Name);
                 }
                 catch (Exception ex)
                 {
@@ -190,6 +199,10 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
 
             var executionContext = container.Resolve<ExecutionContext>();
 
+            var mockClock = new Mock<IClockService>();
+            mockClock.Setup(x => x.Now).Returns(new DateTimeOffset(2025, 1, 13, 5, 47, 53, TimeSpan.FromHours(10)));
+            container.Register(Component.For<IClockService>().Instance(mockClock.Object));
+
             var connectorMock = new Mock<AzureServiceBusConnector>(MockBehavior.Default,
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
                     .Select(p => container.Resolve(p.ParameterType)).ToArray());
@@ -265,6 +278,8 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
   ""user.lastName"": ""Picard"",
   ""Name"": ""Jean Luc Picard"",
   ""Id"": ""69e26b81-bcbf-54f7-af97-be056f73bf9a"",
+  ""TimeStamp"": ""2025-01-13T05:47:53+10:00"",
+  ""Epoch"": 1736711273,
   ""PersistHash"": ""1lzghdhhgqlnucj078/77q=="",
   ""OriginEntityCode"": ""/Person#Acceptance:7c5591cf-861a-4642-861d-3b02485854a0"",
   ""EntityType"": ""/Person"",
@@ -287,6 +302,10 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
             container.Register(Component.For<ILazyComponentLoader>().ImplementedBy<AutoMockingLazyComponentLoader>());
 
             var executionContext = container.Resolve<ExecutionContext>();
+
+            var mockClock = new Mock<IClockService>();
+            mockClock.Setup(x => x.Now).Returns(new DateTimeOffset(2025, 1, 13, 5, 47, 53, TimeSpan.FromHours(10)));
+            container.Register(Component.For<IClockService>().Instance(mockClock.Object));
 
             var connectorMock = new Mock<AzureServiceBusConnector>(MockBehavior.Default,
                 typeof(AzureServiceBusConnector).GetConstructors().First().GetParameters()
@@ -376,6 +395,8 @@ namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
   ""user.lastName"": ""Picard"",
   ""Name"": ""Jean Luc Picard"",
   ""Id"": ""69e26b81-bcbf-54f7-af97-be056f73bf9a"",
+  ""TimeStamp"": ""2025-01-13T05:47:53+10:00"",
+  ""Epoch"": 1736711273,
   ""PersistHash"": ""1lzghdhhgqlnucj078/77q=="",
   ""OriginEntityCode"": ""/Person#Acceptance:7c5591cf-861a-4642-861d-3b02485854a0"",
   ""EntityType"": ""/Person"",

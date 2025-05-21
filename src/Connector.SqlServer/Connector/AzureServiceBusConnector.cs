@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
+using CluedIn.Connector.AzureServiceBus.Services;
 using CluedIn.Core;
 using CluedIn.Core.Caching;
 using CluedIn.Core.Connectors;
@@ -22,6 +23,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         private readonly ILogger<AzureServiceBusConnector> _logger;
         private readonly IApplicationCache _cache;
         private readonly IServiceBusSenderFactory _serviceBusSenderFactory;
+        private readonly IClockService _clockService;
 
         private static readonly List<MessageBatch> _batches = new List<MessageBatch>();
         private readonly SemaphoreSlim _batchLocker = new SemaphoreSlim(1, 1);
@@ -30,12 +32,14 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
         public AzureServiceBusConnector(
             ILogger<AzureServiceBusConnector> logger,
             IApplicationCache cache,
-            IServiceBusSenderFactory serviceBusSenderFactory
+            IServiceBusSenderFactory serviceBusSenderFactory,
+            IClockService clockService
             ) : base(AzureServiceBusConstants.ProviderId)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cache = cache;
             _serviceBusSenderFactory = serviceBusSenderFactory;
+            _clockService = clockService ?? throw new ArgumentNullException(nameof(clockService));
         }
 
         public override async Task CreateContainer(ExecutionContext executionContext, Guid connectorProviderDefinitionId, IReadOnlyCreateContainerModelV2 model)
@@ -156,7 +160,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
 
                     if (!ex.Message.Contains("claims required")) // token's in the connection string must be valid if we get a claims required message
                     {
-                        return new ConnectionVerificationResult(false);
+                        return new ConnectionVerificationResult(false, ex.Message);
                     }
                 }
             }
@@ -172,7 +176,7 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
                 catch (Exception ex)
                 {
                     _logger.LogInformation(ex, $"{nameof(VerifyConnection)} failed for {nameof(AzureServiceBusConnector)}");
-                    return new ConnectionVerificationResult(false);
+                    return new ConnectionVerificationResult(false, ex.Message);
                 }
             }
 
@@ -189,7 +193,10 @@ namespace CluedIn.Connector.AzureServiceBus.Connector
             // matching output format of previous version of the connector
             var data = connectorEntityData.Properties.ToDictionary(x => x.Name, x => x.Value);
             data.Add("Id", connectorEntityData.EntityId);
-            
+
+            data.Add("TimeStamp", _clockService.Now);
+            data.Add("Epoch", _clockService.Now.ToUnixTimeSeconds());
+
             if (connectorEntityData.PersistInfo != null)
             {
                 data.Add("PersistHash", connectorEntityData.PersistInfo.PersistHash);
