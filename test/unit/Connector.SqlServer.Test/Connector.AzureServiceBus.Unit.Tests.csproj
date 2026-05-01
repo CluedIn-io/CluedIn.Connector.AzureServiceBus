@@ -6,7 +6,7 @@
     <None Remove="D:\Projects\CluedIn\CluedIn.Connector.SqlServer\build\assets\nugetlogo.png" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AutoFixture.Xunit2" />
+    <PackageReference Include="AutoFixture.Xunit3" />
     <PackageReference Include="CluedIn.DataStore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
@@ -14,7 +14,7 @@
     <PackageReference Include="AutoFixture.Idioms" />
     <PackageReference Include="AutoFixture.AutoMoq" />
     <PackageReference Include="coverlet.msbuild" />
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Moq" />
   </ItemGroup>
