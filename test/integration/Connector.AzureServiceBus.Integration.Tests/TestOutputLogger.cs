@@ -1,7 +1,8 @@
 using System;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit.Abstractions;
+using Xunit;
+
 
 namespace CluedIn.Connector.AzureServiceBus.Integration.Tests
 {

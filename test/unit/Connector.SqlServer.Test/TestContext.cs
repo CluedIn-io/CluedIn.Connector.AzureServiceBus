@@ -45,8 +45,6 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
         public readonly Mock<IOrganizationRepository> OrganizationRepository;
           
            
-        public readonly Mock<ISystemVocabularies> SystemVocabularies;
-        
         public readonly Mock<WorkflowRepository> WorkflowRepository;
         public readonly Mock<InMemoryApplicationCache> ApplicationCache;
           
@@ -96,8 +94,6 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
 
             OrganizationRepository = new Mock<IOrganizationRepository>(MockBehavior.Loose).As<IOrganizationRepository>();
 
-            SystemVocabularies = new Mock<SystemVocabularies>(MockBehavior.Loose, AppContext.Object).As<ISystemVocabularies>();
-
             WorkflowRepository = new Mock<WorkflowRepository>(MockBehavior.Loose, AppContext.Object);
             ApplicationCache = new Mock<InMemoryApplicationCache>(MockBehavior.Loose, Container);
 
@@ -106,7 +102,6 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
             SystemContext.CallBase = true;
             AppContext.CallBase = true;
             OrganizationRepository.CallBase = true;
-            SystemVocabularies.CallBase = true;
             WorkflowRepository.CallBase = true;
             ApplicationCache.CallBase = true;
 
@@ -160,7 +155,6 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
             Container.Register(Component.For<IOrganizationRepository>().UsingFactoryMethod(() => proxyGenerator.CreateInterfaceProxyWithTarget(OrganizationRepository.Object)));
             Container.Register(Component.For<IServer>().UsingFactoryMethod(() => proxyGenerator.CreateInterfaceProxyWithTarget(Server.Object)));
             Container.Register(Component.For<IBus>().UsingFactoryMethod(() => proxyGenerator.CreateInterfaceProxyWithTarget(Bus.Object)));
-            Container.Register(Component.For<ISystemVocabularies>().UsingFactoryMethod(() => SystemVocabularies.Object));
             Container.Register(Component.For<WorkflowRepository>().UsingFactoryMethod(() => WorkflowRepository.Object));
             Container.Register(Component.For<IApplicationCache>().UsingFactoryMethod(() => ApplicationCache.Object));
 
