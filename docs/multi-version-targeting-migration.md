@@ -152,7 +152,11 @@ pipeline's actual pinned `GitVersion.Tool 5.9.0`: resolves to `1.0.0-multi-versi
 
 ## Step 7 — Push and confirm CI
 
-Status: **Not started**
+Status: **Done**
+
+PR #49, build 152001 — fully green on the first push: all three `Multi-version build+test` legs
+(4.7.0, 4.8.0, 5.0.0-beta.*) and `Multi-version: publish` passed. No integration-test legs ran
+(expected — `runIngegrationTests` defaulted to `false`, see Step 1).
 
 ---
 
@@ -165,4 +169,4 @@ Status: **Not started**
 - [x] Test projects — xunit v2/v3 split; `GlobalUsings.cs` for `Xunit.Abstractions` in both
 - [x] Source — audited across all three legs; one real break found and fixed (EasyNetQ 7.x→8.x `IsConnected`→`GetConnectionStatus`, test-only); verified with real `dotnet test` on two legs
 - [x] `GitVersion.yml` — `next-version: 1.0`; `ignore.commits-before: 2025-05-24T00:00:00`; verified `1.0.0` with the pinned GitVersion.Tool 5.9.0
-- [ ] Push branch and confirm the actual Azure DevOps pipeline run is green end-to-end
+- [x] Pushed branch and confirmed the Azure DevOps pipeline is green end-to-end — PR #49, build 152001: all three legs + `Multi-version: publish` passed
