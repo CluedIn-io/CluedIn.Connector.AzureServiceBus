@@ -1,5 +1,11 @@
 mode: ContinuousDeployment
-next-version: 5.0
+# The CluedIn version is now encoded in the published package suffix (e.g. .470/.480/.500), so this
+# repo's own version no longer needs to track CluedIn. Reset to 1.0. commits-before skips past the
+# highest pre-existing tag (v4.5.0 / 4.5.0, 2025-05-21T15:36:49+01:00) - padded 2+ days, since
+# GitVersion.Tool 5.9.0 appears to evaluate this against local machine time, not UTC.
+next-version: 1.0
+ignore:
+  commits-before: 2025-05-24T00:00:00
 branches:
   master:
     mode: ContinuousDelivery

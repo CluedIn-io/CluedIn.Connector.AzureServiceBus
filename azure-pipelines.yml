@@ -1,9 +1,37 @@
 name: $(Date:yyyyMMdd)$(Rev:.r)
 parameters:
+  # Defaulted to false as part of the multi-version migration (was true). This repo's integration
+  # tests connect to a REAL Azure Service Bus queue via $(ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING)/
+  # $(TESTQUEUE_CONNECTIONSTRING) pipeline secret variables, remapped to the SERVICEBUS_-prefixed
+  # env var names the test code reads (see the old 'Set Environment variables' step this file used
+  # to have). crawler.build.jobs.yml has no hook to inject that remapping step into its generated
+  # per-leg integration-test jobs, and even if it did, running 3 legs concurrently against the same
+  # single shared queue risks real message collisions between legs (the template's own comments
+  # warn about exactly this: a real external resource two concurrent runs might both write to/read
+  # from/delete is not something the template can make safe on a migrating repo's behalf). Needs a
+  # human decision - either rename the pipeline secrets directly to the SERVICEBUS_-prefixed names
+  # and provision a queue per leg, or accept sequential-only integration testing outside this
+  # pipeline - before turning this back on.
   - name: runIngegrationTests
     displayName: Run Integration Tests
     type: boolean
-    default: true
+    default: false
+
+  - name: pipelineTemplateRef
+    displayName: Pipeline Template Ref
+    type: string
+    default: refs/heads/feature/multi-version-packaging
+
+  # Manual, one-off check that this repo still builds and tests cleanly against a CluedIn.Core
+  # version outside multiVersionCluedInTargets below (e.g. a new release, to see if retargeting is
+  # needed) - leave blank for a normal run. Its target framework is auto-detected, not supplied
+  # here. See crawler.build.jobs.yml's probeCluedInVersion parameter for what this does: on a
+  # non-blank value, the entire normal multi-version job graph (including publish) is replaced by a
+  # single build+test job for this version, and nothing is published.
+  - name: probeCluedInVersion
+    displayName: Probe CluedIn Version (leave blank for a normal run)
+    type: string
+    default: ''
 
 trigger:
   branches:
@@ -25,10 +53,7 @@ resources:
       type: github
       name: CluedIn-io/AzurePipelines.Templates
       endpoint: 'CluedIn-io'
-      ref: refs/heads/refactor
-
-pool:
-  vmImage: 'windows-latest'
+      ref: ${{ parameters.pipelineTemplateRef }}
 
 variables:
   - name: testFolderPath
@@ -40,22 +65,31 @@ variables:
   - name: buildConfiguration
     value: Release
 
-steps:
-   # Configure NuGet
-  - task: NuGetAuthenticate@0
-    displayName: 'Authenticate with nuget'
-    
-  - task: PowerShell@2
-    displayName: 'Set Environment variables'
-    inputs:
-      targetType: inline
-      script: |
-        Write-Host ("##vso[task.setvariable variable=SERVICEBUS_ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING;]$(ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING)")
-        Write-Host ("##vso[task.setvariable variable=SERVICEBUS_TESTQUEUE_CONNECTIONSTRING;]$(TESTQUEUE_CONNECTIONSTRING)")
-
-  - template: crawler.build.yml@templates
+# jobs:, not pool:/steps: - crawler.build.jobs.yml is a jobs template, the only one with
+# multi-version support (crawler.build.yml has none). Each job installs/authenticates its own
+# SDK/NuGet, so the old top-level NuGetAuthenticate@0 step and 'Set Environment variables' step -
+# which only mattered for integration tests connecting to a real Service Bus namespace - move
+# inside the template's own executeIntegrationTests path; this repo's integration tests are fully
+# mocked (Castle Windsor + Moq, no real Service Bus connection), so those two env vars are unused
+# dead weight and are dropped here rather than reproduced.
+jobs:
+  - template: crawler.build.jobs.yml@templates
     parameters:
+      pool:
+        vmImage: 'ubuntu-22.04'
       githubReleaseInMaster: true
       publicReleaseForMaster: true
-      executeIntegrationTests: ${{ parameters.runIngegrationTests }}
       publishCodeCoverage: true
+      useGitVersionDotNetTool: true
+      publishToDevFeed: true
+      probeCluedInVersion: ${{ parameters.probeCluedInVersion }}
+      executeIntegrationTests: ${{ parameters.runIngegrationTests }}
+      # CluedIn 4.7.0/4.8.0 are net6.0; 5.0.0-beta.* floats to whatever prerelease is newest in the
+      # develop feed (verified 2026-09-11: 5.0.0-* resolves to 5.0.0-beta.576). 4.6.0 excluded -
+      # this repo's code already calls the async, executionContext-taking stream APIs
+      # (IStreamRepository.GetAllStreams/SetupConnector/GetStreamMappings) that only exist from
+      # 4.7.0 onward.
+      multiVersionCluedInTargets:
+        - cluedInVersion: '4.7.0'
+        - cluedInVersion: '4.8.0'
+        - cluedInVersion: '5.0.0-beta.*'

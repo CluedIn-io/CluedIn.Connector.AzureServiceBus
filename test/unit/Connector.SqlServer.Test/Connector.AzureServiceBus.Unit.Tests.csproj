@@ -6,7 +6,6 @@
     <None Remove="D:\Projects\CluedIn\CluedIn.Connector.SqlServer\build\assets\nugetlogo.png" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AutoFixture.Xunit3" />
     <PackageReference Include="CluedIn.DataStore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
@@ -14,9 +13,18 @@
     <PackageReference Include="AutoFixture.Idioms" />
     <PackageReference Include="AutoFixture.AutoMoq" />
     <PackageReference Include="coverlet.msbuild" />
-    <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Moq" />
+  </ItemGroup>
+  <!-- xunit v3 + AutoFixture.Xunit3 for net10.0 (CluedIn 5.0+) -->
+  <ItemGroup Condition="$(DefineConstants.Contains('CLUEDIN_V50'))">
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AutoFixture.Xunit3" />
+  </ItemGroup>
+  <!-- xunit v2 + AutoFixture.Xunit2 for net6.0 (CluedIn &lt; 5.0) -->
+  <ItemGroup Condition="!$(DefineConstants.Contains('CLUEDIN_V50'))">
+    <PackageReference Include="xunit" />
+    <PackageReference Include="AutoFixture.Xunit2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Connector.SqlServer\Connector.AzureServiceBus.csproj" />
