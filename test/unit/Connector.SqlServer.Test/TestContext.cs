@@ -161,7 +161,19 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
 
             // Setup
             Server.Setup(s => s.ApplicationContext).Returns(() => Container.Resolve<ApplicationContext>());
+            // EasyNetQ 8.x (pulled in transitively by CluedIn 5.0+) replaced IAdvancedBus.IsConnected
+            // (bool) with GetConnectionStatus() (PersistentConnectionStatus); EasyNetQ 7.x (CluedIn
+            // 4.7/4.8) still has the old bool property.
+#if CLUEDIN_V50
+            Bus.Setup(s => s.Advanced.GetConnectionStatus(It.IsAny<EasyNetQ.Persistent.PersistentConnectionType>()))
+                .Returns(new EasyNetQ.Persistent.PersistentConnectionStatus(
+                    EasyNetQ.Persistent.PersistentConnectionType.Producer,
+                    EasyNetQ.Persistent.PersistentConnectionState.Disconnected,
+                    null,
+                    null));
+#else
             Bus.Setup(s => s.Advanced.IsConnected).Returns(false);
+#endif
 
             OrganizationFactory = (ctx, id) => new TestOrganization(ctx.ApplicationContext, id);
 

@@ -1,28 +1,47 @@
 <Project>
   <PropertyGroup Label="Dependency Versions">
-    <_EntityFramework>10.0.7</_EntityFramework>
     <_AutoFixture>5.0.0-preview0012</_AutoFixture>
-    <_CluedIn>5.0.0-*</_CluedIn>
+    <_AutoFixtureV2>4.18.0</_AutoFixtureV2>
+    <!-- Guarded so the pipeline's -p:_CluedIn=<version> per build leg wins. -->
+    <_CluedIn Condition="'$(_CluedIn)' == ''">5.0.0-*</_CluedIn>
   </PropertyGroup>
   <ItemGroup>
     <!--
-        Specified versions for dependencies in test projects
+        Specified versions for dependencies in test projects, common to every target
 
         MUST SPECIFY IN CSPROJ AS <PackageReference Name="<depName>" />
     -->
-    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.3.0" />
     <PackageReference Update="Azure.Messaging.ServiceBus" Version="7.2.1" />
-    <PackageReference Update="AutoFixture.Xunit3" Version="$(_AutoFixture)" />
-    <PackageReference Update="AutoFixture.Idioms" Version="$(_AutoFixture)" />
-    <PackageReference Update="AutoFixture.AutoMoq" Version="$(_AutoFixture)" />
+    <PackageReference Update="AutoFixture.Idioms" Version="4.18.0" />
+    <PackageReference Update="AutoFixture.AutoMoq" Version="4.18.0" />
     <PackageReference Update="coverlet.msbuild" Version="2.8.0" />
-    <PackageReference Update="xunit.v3" Version="3.2.2" />
-    <PackageReference Update="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Update="Moq" Version="4.13.1" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore" Version="$(_EntityFramework)" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore.InMemory" Version="$(_EntityFramework)" />
     <PackageReference Update="coverlet.collector" Version="1.2.0" />
     <PackageReference Update="FluentAssertions" Version="6.11.0" />
+  </ItemGroup>
+  <!-- Below CluedIn 5.0.0 (net6.0) - EF Core 6 and xunit v2/AutoFixture.Xunit2, matching what the
+       4.x release lines used before this repo's own tooling moved to net10.0/xunit v3 on develop.
+       The newer EF Core 10/xunit.v3/Microsoft Testing Platform-based tooling does not support
+       net6.0. -->
+  <ItemGroup Condition="!$(DefineConstants.Contains('CLUEDIN_V50'))">
+    <PackageReference Update="Microsoft.EntityFrameworkCore" Version="6.0.16" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.InMemory" Version="6.0.16" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Update="xunit" Version="2.9.3" />
+    <PackageReference Update="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+  <!-- CluedIn 5.0.0+ (this repo's own default) - EF Core 10 and the current xunit.v3/Microsoft
+       Testing Platform-based tooling. -->
+  <ItemGroup Condition="$(DefineConstants.Contains('CLUEDIN_V50'))">
+    <PackageReference Update="Microsoft.EntityFrameworkCore" Version="10.0.7" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.7" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageReference Update="AutoFixture.Xunit3" Version="$(_AutoFixture)" />
+    <PackageReference Update="xunit.v3" Version="3.2.2" />
+    <PackageReference Update="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+  <ItemGroup Condition="!$(DefineConstants.Contains('CLUEDIN_V50'))">
+    <PackageReference Update="AutoFixture.Xunit2" Version="$(_AutoFixtureV2)" />
   </ItemGroup>
   <ItemGroup>
     <!--

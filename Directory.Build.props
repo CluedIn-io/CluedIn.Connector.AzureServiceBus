@@ -1,6 +1,23 @@
 <Project>
+  <PropertyGroup Label="Dependency Versions">
+    <_CluedIn Condition="'$(_CluedIn)' == ''">5.0.0-*</_CluedIn>
+
+    <!-- Strip pre-release suffix for version comparison. -->
+    <_HyphenIndex>$(_CluedIn.IndexOf('-'))</_HyphenIndex>
+    <_CluedInVersionOnly Condition="'$(_HyphenIndex)' != '-1'">$(_CluedIn.Substring(0, $(_HyphenIndex)))</_CluedInVersionOnly>
+    <_CluedInVersionOnly Condition="'$(_HyphenIndex)' == '-1'">$(_CluedIn)</_CluedInVersionOnly>
+
+    <DefineConstants Condition="$([System.Version]::Parse($(_CluedInVersionOnly))) &gt;= $([System.Version]::Parse('4.7.0'))">$(DefineConstants);CLUEDIN_V47</DefineConstants>
+    <DefineConstants Condition="$([System.Version]::Parse($(_CluedInVersionOnly))) &gt;= $([System.Version]::Parse('4.8.0'))">$(DefineConstants);CLUEDIN_V48</DefineConstants>
+    <DefineConstants Condition="$([System.Version]::Parse($(_CluedInVersionOnly))) &gt;= $([System.Version]::Parse('5.0.0'))">$(DefineConstants);CLUEDIN_V50</DefineConstants>
+  </PropertyGroup>
+
   <PropertyGroup Label="Compilation Metadata">
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Multi-version targeting: pipeline overrides this per build leg via
+         -p:CluedInMultiVersionTargetFramework=. Falls back to net10.0 for local development. -->
+    <TargetFramework Condition="'$(CluedInMultiVersionTargetFramework)' != ''">$(CluedInMultiVersionTargetFramework)</TargetFramework>
+    <TargetFramework Condition="'$(CluedInMultiVersionTargetFramework)' == ''">net10.0</TargetFramework>
+    <LangVersion>13.0</LangVersion>
   </PropertyGroup>
 
   <!-- TODO: Clean up warnings -->
