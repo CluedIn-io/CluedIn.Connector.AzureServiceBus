@@ -1,21 +1,22 @@
 name: $(Date:yyyyMMdd)$(Rev:.r)
 parameters:
-  # Defaulted to false as part of the multi-version migration (was true). This repo's integration
-  # tests connect to a REAL Azure Service Bus queue via $(ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING)/
-  # $(TESTQUEUE_CONNECTIONSTRING) pipeline secret variables, remapped to the SERVICEBUS_-prefixed
-  # env var names the test code reads (see the old 'Set Environment variables' step this file used
-  # to have). crawler.build.jobs.yml has no hook to inject that remapping step into its generated
-  # per-leg integration-test jobs, and even if it did, running 3 legs concurrently against the same
-  # single shared queue risks real message collisions between legs (the template's own comments
-  # warn about exactly this: a real external resource two concurrent runs might both write to/read
-  # from/delete is not something the template can make safe on a migrating repo's behalf). Needs a
-  # human decision - either rename the pipeline secrets directly to the SERVICEBUS_-prefixed names
-  # and provision a queue per leg, or accept sequential-only integration testing outside this
-  # pipeline - before turning this back on.
+  # Re-enabled 2026-09-11 as an experiment: this repo's integration tests connect to a REAL Azure
+  # Service Bus queue (test/integration/Connector.AzureServiceBus.Integration.Tests -
+  # ServiceBusClient/ServiceBusAdministrationClient, not mocked - a prior comment here claiming
+  # "fully mocked" was wrong). The pipeline secrets ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING/
+  # TESTQUEUE_CONNECTIONSTRING have been renamed to the SERVICEBUS_-prefixed names the test code
+  # reads via Environment.GetEnvironmentVariable, and converted from secret to plain pipeline
+  # variables so crawler.build.jobs.yml's auto-generated per-leg jobs (which have no hook to inject
+  # a remapping step, and don't expose secrets to job env without one) can see them - the old
+  # pipeline instead used a 'Set Environment variables' step to do this remapping per-job, which the
+  # new template doesn't support. Turning this on is a deliberate test of whether the template's own
+  # concurrent per-leg execution (three legs = three simultaneous connections to the same single
+  # queue, no per-leg isolation) actually collides in practice, before deciding whether to invest in
+  # a real fix (per-leg resources, or a distributed lock in a custom setup/teardown script).
   - name: runIngegrationTests
     displayName: Run Integration Tests
     type: boolean
-    default: false
+    default: true
 
   - name: pipelineTemplateRef
     displayName: Pipeline Template Ref
@@ -67,11 +68,13 @@ variables:
 
 # jobs:, not pool:/steps: - crawler.build.jobs.yml is a jobs template, the only one with
 # multi-version support (crawler.build.yml has none). Each job installs/authenticates its own
-# SDK/NuGet, so the old top-level NuGetAuthenticate@0 step and 'Set Environment variables' step -
-# which only mattered for integration tests connecting to a real Service Bus namespace - move
-# inside the template's own executeIntegrationTests path; this repo's integration tests are fully
-# mocked (Castle Windsor + Moq, no real Service Bus connection), so those two env vars are unused
-# dead weight and are dropped here rather than reproduced.
+# SDK/NuGet, so the old top-level NuGetAuthenticate@0 step is dropped. The old top-level 'Set
+# Environment variables' step (remapping ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING/
+# TESTQUEUE_CONNECTIONSTRING to the SERVICEBUS_-prefixed names) is also dropped - not because it's
+# unneeded, but because those two pipeline variables are now plain (not secret) and correctly named
+# SERVICEBUS_* already (see runIngegrationTests' own comment above), so every job - including the
+# template's auto-generated per-leg integration-test jobs, which have no hook for a custom step
+# like the old one - picks them up automatically as environment variables without any remapping.
 jobs:
   - template: crawler.build.jobs.yml@templates
     parameters:
