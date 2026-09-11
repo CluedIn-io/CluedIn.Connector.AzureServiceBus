@@ -160,13 +160,50 @@ PR #49, build 152001 — fully green on the first push: all three `Multi-version
 
 ---
 
+## Step 8 — Integration tests re-enabled; concurrency risk tested empirically, didn't materialize
+
+Status: **Done**
+
+Step 1's collision concern was never actually tested — just reasoned about (three legs, one shared
+queue, no isolation, the shared template runs them concurrently by design). Tested it for real:
+
+1. Renamed the pipeline's `ROOTMANAGESHAREDACCESSKEY_CONNECTIONSTRING`/`TESTQUEUE_CONNECTIONSTRING`
+   secrets to the `SERVICEBUS_`-prefixed plain (non-secret) variables the test code reads directly
+   via `Environment.GetEnvironmentVariable` — `crawler.build.jobs.yml`'s auto-generated per-leg jobs
+   have no hook to inject the old pipeline's env-var-remapping step, but non-secret pipeline
+   variables are auto-exposed to every job's environment without one.
+2. First attempt (build 152034) failed all three legs identically with
+   `ServiceBusException: Queue was not found (MessagingEntityNotFound)` /
+   `"No service is hosted at the specified address"`. Root-caused via a standalone PowerShell script
+   hitting the Service Bus management REST API directly (SAS-signed, outside CI) against the
+   configured namespace: it had **zero real queues**, and the entity the `TESTQUEUE_CONNECTIONSTRING`
+   pointed at came back as an `EventHubDescription`, not a `QueueDescription` - the namespace was an
+   Event Hubs namespace (shares the same `.servicebus.windows.net` DNS suffix as Service Bus, a
+   well-known gotcha), not a real Service Bus queue namespace. Not a concurrency problem at all -
+   these tests could never have passed against that resource regardless of how many legs ran.
+3. Re-verified a corrected connection string (a genuine namespace with a real queue) the same way
+   before touching the pipeline again: list/create/delete against the root key all succeeded, and
+   the target queue resolved as a real `QueueDescription`.
+4. Re-ran with the corrected pipeline variables (build 152035, no code change, same commit) - **all
+   three integration-test legs passed concurrently**, plus `Multi-version: publish`. Each test run
+   creates its own uniquely-named queue (`TestQueueName`, GUID-suffixed) rather than reusing a fixed
+   name, so three legs hitting the same namespace simultaneously never actually contend on shared
+   state. The originally-assumed collision risk does not materialize in practice with a real,
+   correctly-provisioned queue namespace.
+
+`runIngegrationTests` stays defaulted to `true`. No lock scripts, no per-leg resource provisioning,
+and no shared-template changes were needed after all.
+
+---
+
 ## Checklist
 
-- [x] `azure-pipelines.yml` — switched to `crawler.build.jobs.yml` with `multiVersionCluedInTargets` (4.7.0, 4.8.0, 5.0.0-beta.*); integration tests defaulted off pending a human decision on real-queue isolation
+- [x] `azure-pipelines.yml` — switched to `crawler.build.jobs.yml` with `multiVersionCluedInTargets` (4.7.0, 4.8.0, 5.0.0-beta.*)
 - [x] `Directory.Build.props` — honours `CluedInMultiVersionTargetFramework`; `DefineConstants` derived; `LangVersion` pinned to 13.0
 - [x] `Packages.props` — `_CluedIn` guarded; EF Core and xunit/AutoFixture split by TFM
 - [x] `NuGet.config` — renamed from `Nuget.config`
 - [x] Test projects — xunit v2/v3 split; `GlobalUsings.cs` for `Xunit.Abstractions` in both
 - [x] Source — audited across all three legs; one real break found and fixed (EasyNetQ 7.x→8.x `IsConnected`→`GetConnectionStatus`, test-only); verified with real `dotnet test` on two legs
 - [x] `GitVersion.yml` — `next-version: 1.0`; `ignore.commits-before: 2025-05-24T00:00:00`; verified `1.0.0` with the pinned GitVersion.Tool 5.9.0
-- [x] Pushed branch and confirmed the Azure DevOps pipeline is green end-to-end — PR #49, build 152001: all three legs + `Multi-version: publish` passed
+- [x] Integration tests — re-enabled (`runIngegrationTests` defaulted back to `true`); real live-queue collision risk tested empirically across three concurrent legs and confirmed it does not materialize, after fixing an unrelated wrong-resource-type problem with the pipeline's connection strings
+- [x] Pushed branch and confirmed the Azure DevOps pipeline is green end-to-end — PR #49, build 152035: all three legs + `Integration tests` (all three) + `Multi-version: publish` passed
