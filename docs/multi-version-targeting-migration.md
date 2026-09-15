@@ -207,3 +207,24 @@ and no shared-template changes were needed after all.
 - [x] `GitVersion.yml` — `next-version: 1.0`; `ignore.commits-before: 2025-05-24T00:00:00`; verified `1.0.0` with the pinned GitVersion.Tool 5.9.0
 - [x] Integration tests — re-enabled (`runIngegrationTests` defaulted back to `true`); real live-queue collision risk tested empirically across three concurrent legs and confirmed it does not materialize, after fixing an unrelated wrong-resource-type problem with the pipeline's connection strings
 - [x] Pushed branch and confirmed the Azure DevOps pipeline is green end-to-end — PR #49, build 152035: all three legs + `Integration tests` (all three) + `Multi-version: publish` passed
+
+---
+
+## Addendum — version baseline moved from 1.0.0 to 100.0.0
+
+Status: **Done**
+
+The CluedIn version is now carried entirely by the package suffix (`.470`/`.480`/`.500`), not by
+this repo's own `next-version` number, so that number moved again, from `1.0` to `100.0`. Reason:
+repos that were previously at 4.x/5.x under the old single-version-targeting scheme would appear to
+"go backwards" if their next version showed as `1.0.0` — `100.0.0` is unambiguously higher than any
+prior single-version release number this repo ever had.
+
+Unlike the original `1.0` reset, no `commits-before`/`ignore` trick is needed this time:
+`next-version` only needs help overriding an existing tag when the configured value is *lower* than
+that tag, and `100.0` is already higher than every pre-existing tag here. Removed the
+`ignore.commits-before` line entirely (this repo's `ignore:` block had no `sha`, so the whole block
+was removed).
+
+Verified with a real local `dotnet-gitversion` run: `MajorMinorPatch` resolves to `"100.0.0"`.
+`docs/1.0.0-release-notes.md` renamed to `docs/100.0.0-release-notes.md`.

@@ -1,11 +1,12 @@
 mode: ContinuousDeployment
 # The CluedIn version is now encoded in the published package suffix (e.g. .470/.480/.500), so this
-# repo's own version no longer needs to track CluedIn. Reset to 1.0. commits-before skips past the
-# highest pre-existing tag (v4.5.0 / 4.5.0, 2025-05-21T15:36:49+01:00) - padded 2+ days, since
-# GitVersion.Tool 5.9.0 appears to evaluate this against local machine time, not UTC.
-next-version: 1.0
-ignore:
-  commits-before: 2025-05-24T00:00:00
+# repo's own version no longer needs to track CluedIn. Started at 100.0 (not 1.0) so customers who
+# saw this repo at 4.x/5.x under the old single-version scheme never see it "go backwards" to 1.x
+# under the new one. Unlike the original 1.0 reset, no commits-before/ignore trick is needed here -
+# GitVersion's next-version only needs help overriding an existing tag when the new value is LOWER
+# than that tag; 100.0 is already higher than every pre-existing tag, so it wins on its own
+# (verified via a real local `dotnet-gitversion` run).
+next-version: 100.0
 branches:
   master:
     mode: ContinuousDelivery
