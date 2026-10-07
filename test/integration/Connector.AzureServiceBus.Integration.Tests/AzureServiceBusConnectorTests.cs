@@ -19,7 +19,7 @@ using FluentAssertions;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
-using Xunit.Abstractions;
+
 using ExecutionContext = CluedIn.Core.ExecutionContext;
 
 namespace CluedIn.Connector.AzureServiceBus.Integration.Tests

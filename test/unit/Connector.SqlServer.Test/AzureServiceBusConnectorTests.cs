@@ -19,7 +19,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestPlatform.Utilities;
 using Moq;
 using Xunit;
-using Xunit.Abstractions;
+
 using ExecutionContext = CluedIn.Core.ExecutionContext;
 
 namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
@@ -40,7 +40,7 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
         [InlineData("connection1", "container1", "connection1", "container2", 2)]   //    same   connection different container
         [InlineData("connection1", "container1", "connection2", "container1", 2)]   // different connection    same   container
         [InlineData("connection1", "container1", "connection2", "container2", 2)]   // different connection different container
-        public async void BatchesPartitionedByConnectionAndContainer(string connectionString1, string containerName1, string connectionString2, string containerName2, int expectedBatchCount)
+        public async Task BatchesPartitionedByConnectionAndContainer(string connectionString1, string containerName1, string connectionString2, string containerName2, int expectedBatchCount)
         {
             /*
              * arrange
@@ -162,7 +162,7 @@ namespace CluedIn.Connector.AzureServiceBus.Unit.Tests
         }
 
         [Fact]
-        public async void ExceptionOnBatchSendIsRequeuedForEachStoreDataTask()
+        public async Task ExceptionOnBatchSendIsRequeuedForEachStoreDataTask()
         {
             /*
              * arrange

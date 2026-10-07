@@ -92,30 +92,28 @@ namespace CluedIn.Connector.AzureServiceBus
                         }
                     }
 
-                    var streams = streamRepository.GetAllStreams().ToList();
+                    var orgDataStore = ApplicationContext.System.Organization.DataStores.GetDataStore<OrganizationProfile>();
+                    var organizationProfiles = await orgDataStore.SelectAsync(ApplicationContext.System.CreateExecutionContext(), _ => true);
 
-                    var organizationIds = streams.Select(s => s.OrganizationId).Distinct().ToArray();
-
-                    foreach (var orgId in organizationIds)
+                    foreach (var organizationProfile in organizationProfiles)
                     {
-                        var org = new Organization(ApplicationContext, orgId);
+                        var executionContext = ApplicationContext.CreateExecutionContext(organizationProfile.Id);
+                        var streams = await streamRepository.GetAllStreams(executionContext).ToList();
 
-                        foreach (var provider in org.Providers.AllProviderDefinitions.Where(x =>
+                        foreach (var provider in executionContext.Organization.Providers.AllProviderDefinitions.Where(x =>
                                      x.ProviderId == AzureServiceBusConstants.ProviderId))
                         {
                             foreach (var stream in streams.Where(s => s.ConnectorProviderDefinitionId == provider.Id))
                             {
                                 if (stream.Mode != StreamMode.EventStream)
                                 {
-                                    var executionContext = ApplicationContext.CreateExecutionContext(orgId);
-
                                     var model = new SetupConnectorModel
                                     {
                                         ConnectorProviderDefinitionId = provider.Id,
                                         Mode = StreamMode.EventStream,
                                         ContainerName = stream.ContainerName,
                                         DataTypes =
-                                            (await streamRepository.GetStreamMappings(stream.Id))
+                                            (await streamRepository.GetStreamMappings(executionContext, stream.Id))
                                             .Select(x => new DataTypeEntry
                                             {
                                                 Key = x.SourceDataType, Type = x.SourceObjectType
@@ -128,7 +126,7 @@ namespace CluedIn.Connector.AzureServiceBus
 
                                     Log.LogInformation($"[{AzureServiceBusConstants.ConnectorName}] Setting {nameof(StreamMode.EventStream)} for stream '{stream.Name}' ({stream.Id})");
 
-                                    await streamRepository.SetupConnector(stream.Id, model, executionContext);
+                                    await streamRepository.SetupConnector(executionContext, stream.Id, model);
                                 }
                             }
                         }
